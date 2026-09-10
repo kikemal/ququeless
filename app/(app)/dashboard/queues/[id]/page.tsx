@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
+  QueueEntriesManager,
+  type QueueEntry,
+} from "@/components/dashboard/queue-entries-manager";
+import {
   QueueDetail,
   type QueueDetailData,
 } from "@/components/dashboard/queue-detail";

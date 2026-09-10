@@ -18,7 +18,6 @@ const activeStatuses = new Set(["waiting", "called", "serving"]);
 
 export function QueueEntriesManager({ queueId, queueStatus, entries }: Props) {
   const router = useRouter();
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -67,7 +66,7 @@ export function QueueEntriesManager({ queueId, queueStatus, entries }: Props) {
             </thead>
             <tbody className="divide-y divide-border">
               {entries.map((entry) => {
-                const busy = pendingId === entry.id || isPending;
+                const busy = isPending;
                 return (
                   <tr key={entry.id}>
                     <td className="px-3 py-4 font-display font-semibold text-foreground">{entry.queue_number}</td>

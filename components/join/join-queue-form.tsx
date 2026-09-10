@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState } from "react";
 
 import { joinQueueAction, type JoinQueueState } from "@/app/(public)/q/[slug]/actions";
 import { Button } from "@/components/ui/button";
@@ -15,16 +16,21 @@ type JoinQueueFormProps = {
 const initialState: JoinQueueState = {};
 
 export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
-  const [state, formAction, pending] = useActionState(joinQueueAction, initialState);
-
-  useEffect(() => {
-    if (!state.ticket) return;
-    window.sessionStorage.setItem(
-      `queueless-ticket:${state.ticket.publicId}`,
-      state.ticket.accessToken,
-    );
-    window.location.assign(`/ticket/${state.ticket.publicId}`);
-  }, [state.ticket]);
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState(
+    async (prev: JoinQueueState, formData: FormData) => {
+      const result = await joinQueueAction(prev, formData);
+      if (result.ticket) {
+        window.sessionStorage.setItem(
+          `queueless-ticket:${result.ticket.publicId}`,
+          result.ticket.accessToken,
+        );
+        router.push(`/ticket/${result.ticket.publicId}`);
+      }
+      return result;
+    },
+    initialState,
+  );
 
   const disabled = pending || queueStatus !== "open";
 
