@@ -1,14 +1,27 @@
 {
-  "name": "queueless-tmp",
+  "name": "queueless",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/unit/**/*.test.ts",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:status": "supabase status",
+    "db:types": "node scripts/gen-db-types.mjs",
+    "db:security-check": "supabase db query --local -f tests/integration/phase1_security_checks.sql",
+    "db:behavior-check": "supabase db query --local -f tests/integration/phase1_behavior_checks.sql",
+    "db:phase2-check": "supabase db query --local -f tests/integration/phase2_onboarding_checks.sql",
+    "db:phase3-check": "supabase db query --local -f tests/integration/phase3_services_queues_checks.sql"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.6",
+    "@supabase/supabase-js": "^2.115.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -20,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "supabase": "^2.116.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

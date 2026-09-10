@@ -1,0 +1,399 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3360 >>
+stream
+BT
+/F1 10 Tf
+50 792 Td
+14 TL
+/F2 11 Tf
+(QueueLess ? Phase 1 Documentation) Tj
+/F1 10 Tf
+T*
+(=================================) Tj
+T*
+/F2 11 Tf
+(Virtual Queue Management SaaS) Tj
+/F1 10 Tf
+T*
+() Tj
+T*
+(This document describes what was implemented in Phase 1: Supabase database architecture,) Tj
+T*
+(migrations, Row Level Security \(RLS\), RPC foundations, and generated TypeScript database) Tj
+T*
+/F2 11 Tf
+(types.) Tj
+/F1 10 Tf
+T*
+() Tj
+T*
+(Scope boundary: Phase 1 does NOT include dashboard UI, customer join UI, QR generation,) Tj
+T*
+/F2 11 Tf
+(realtime subscriptions, notifications, payments, or analytics.) Tj
+/F1 10 Tf
+T*
+() Tj
+T*
+(Stack: Next.js, TypeScript, Supabase, PostgreSQL, Supabase Auth, RLS, RPCs.) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(1. Phase 1 goals) Tj
+/F1 10 Tf
+T*
+(================) Tj
+T*
+(  ? Create a reproducible PostgreSQL schema via Supabase migrations.) Tj
+T*
+(  ? Enforce multi-tenant isolation with business_id and RLS.) Tj
+T*
+(  ? Provide secure customer RPCs without customer Auth accounts.) Tj
+T*
+(  ? Enforce queue entry state transitions in the database.) Tj
+T*
+(  ? Generate accurate TypeScript types from the live schema.) Tj
+T*
+(  ? Add typed Supabase clients \(browser, server, admin\).) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(2. Project files added or updated) Tj
+/F1 10 Tf
+T*
+(=================================) Tj
+T*
+(  2.1 Supabase) Tj
+T*
+(  ------------) Tj
+T*
+(  ? supabase/config.toml ? local Supabase project configuration) Tj
+T*
+(  ? supabase/seed.sql ? empty non-production seed placeholder) Tj
+T*
+(  ? supabase/migrations/*.sql ? four ordered migration files \(see section 3\)) Tj
+T*
+(  2.2 Application / library) Tj
+T*
+(  -------------------------) Tj
+T*
+(  ? lib/supabase/client.ts ? browser client \(anon key\)) Tj
+T*
+(  ? lib/supabase/server.ts ? server client with cookies \(anon key\)) Tj
+T*
+(  ? lib/supabase/admin.ts ? server-only service-role client) Tj
+T*
+(  ? lib/supabase/README.md ? usage and secret-handling notes) Tj
+T*
+(  ? types/database.ts ? generated Database types) Tj
+T*
+(  ? scripts/gen-db-types.mjs ? regenerates types from local Supabase) Tj
+T*
+(  ? .env.example ? NEXT_PUBLIC_SUPABASE_URL / ANON_KEY \(+ documented service role\)) Tj
+T*
+(  ? package.json ? db:* scripts and @supabase dependencies) Tj
+T*
+(  ? docs/architecture.md ? section 16 Phase 1 architecture notes) Tj
+T*
+(  ? README.md ? Phase 1 setup instructions) Tj
+T*
+(  2.3 Validation scripts) Tj
+T*
+(  ----------------------) Tj
+T*
+(  ? tests/integration/phase1_security_checks.sql ? privilege invariants) Tj
+T*
+(  ? tests/integration/phase1_behavior_checks.sql ? isolation, transitions, numbering) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(3. Migration files \(what each one does\)) Tj
+/F1 10 Tf
+T*
+(=======================================) Tj
+T*
+(  3.1 20260906180000_init_schema.sql) Tj
+T*
+(  ----------------------------------) Tj
+T*
+/F2 11 Tf
+(Creates the foundation schema.) Tj
+/F1 10 Tf
+T*
+(  ? Enables pgcrypto \(extensions schema\) for secure token hashing.) Tj
+T*
+(  ? Creates enums: member_role, queue_status, entry_status.) Tj
+T*
+(  ? Creates tables: profiles, businesses, business_members, services, queues, queue_entries.) Tj
+T*
+(  ? Adds constraints \(unique slug, positive service minutes, non-negative counters, valid) Tj
+T*
+(    statuses/roles\).) Tj
+T*
+(  ? Adds indexes for membership, services, queues, and queue_entries query patterns.) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 3728 >>
+stream
+BT
+/F1 10 Tf
+50 792 Td
+14 TL
+(  ? Adds updated_at triggers and integrity triggers \(queue/service same business;) Tj
+T*
+(    entry/queue same business\).) Tj
+T*
+(  ? Adds handle_new_user trigger \(auth.users -> profiles\).) Tj
+T*
+(  ? Adds handle_new_business trigger \(creator becomes business_owner\).) Tj
+T*
+(Design note: queue_entries.business_id is denormalized for efficient RLS without recursive) Tj
+T*
+/F2 11 Tf
+(joins.) Tj
+/F1 10 Tf
+T*
+(  3.2 20260906180100_rls_policies.sql) Tj
+T*
+(  -----------------------------------) Tj
+T*
+/F2 11 Tf
+(Implements tenant isolation and access control.) Tj
+/F1 10 Tf
+T*
+(  ? Defines SECURITY DEFINER helpers: is_business_member\(business_id\),) Tj
+T*
+(    is_business_owner\(business_id\).) Tj
+T*
+(  ? Enables and forces RLS on every application table.) Tj
+T*
+(  ? profiles: users can select/update only their own row.) Tj
+T*
+(  ? businesses: members can read; authenticated can insert; owners can update/delete.) Tj
+T*
+(  ? business_members: peers can read; owners manage memberships.) Tj
+T*
+(  ? services / queues: members read; owners write.) Tj
+T*
+(  ? queue_entries: members may SELECT only; no direct INSERT/UPDATE/DELETE for anon or) Tj
+T*
+(    authenticated.) Tj
+T*
+(  ? Column grants hide access_token_hash from authenticated/anon clients.) Tj
+T*
+(  3.3 20260906180200_rpc_functions.sql) Tj
+T*
+(  ------------------------------------) Tj
+T*
+/F2 11 Tf
+(Creates secure RPC foundations for customers and staff.) Tj
+/F1 10 Tf
+T*
+(  ? join_queue\(queue_id, customer_name, customer_phone?\) ? validates open queue, locks queue) Tj
+T*
+(    row, increments current_number safely, stores SHA-256 token hash only, returns public_id) Tj
+T*
+(    + raw token + queue_number + status.) Tj
+T*
+(  ? get_ticket\(public_id, access_token\) ? verifies token hash; returns status, people_ahead,) Tj
+T*
+(    estimated_wait_minutes \(people_ahead x average_service_minutes\), service/business/queue) Tj
+T*
+(    names. Never returns token hash.) Tj
+T*
+(  ? cancel_ticket\(public_id, access_token\) ? waiting -> skipped only.) Tj
+T*
+(  ? transition_entry\(entry_id, new_status\) ? authenticated members only; enforces state) Tj
+T*
+(    machine.) Tj
+T*
+/F2 11 Tf
+(Allowed transitions:) Tj
+/F1 10 Tf
+T*
+(    waiting  -> called | skipped) Tj
+T*
+(    called   -> serving | skipped | no_show) Tj
+T*
+(    serving  -> completed | no_show) Tj
+T*
+(    terminal -> completed | skipped | no_show) Tj
+T*
+(  3.4 20260906180300_harden_function_grants.sql) Tj
+T*
+(  ---------------------------------------------) Tj
+T*
+(Tightens EXECUTE privileges because Supabase may broadly grant execute on public functions.) Tj
+T*
+(  ? Revokes transition_entry and membership helpers from anon.) Tj
+T*
+(  ? Keeps join_queue / get_ticket / cancel_ticket available to anon + authenticated.) Tj
+T*
+(  ? Keeps internal hash/token helpers non-executable by clients.) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(4. Database objects summary) Tj
+/F1 10 Tf
+T*
+(===========================) Tj
+T*
+(  4.1 Tables) Tj
+T*
+(  ----------) Tj
+T*
+(  ? profiles ? id \(FK auth.users\), full_name, email, created_at) Tj
+T*
+(  ? businesses ? id, name, slug \(unique\), business_type, phone, email, logo_url, timestamps) Tj
+T*
+(  ? business_members ? business_id, user_id, role \(business_owner|staff\),) Tj
+T*
+(    unique\(business_id,user_id\)) Tj
+T*
+(  ? services ? business_id, name, description, average_service_minutes \(>0\), is_active) Tj
+T*
+(  ? queues ? business_id, service_id, name, status \(open|paused|closed\), current_number) Tj
+T*
+(    \(>=0\)) Tj
+T*
+(  ? queue_entries ? public_id, business_id, queue_id, customer fields, queue_number, status,) Tj
+T*
+(    access_token_hash, timestamps) Tj
+T*
+(  4.2 Security model) Tj
+T*
+(  ------------------) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 1661 >>
+stream
+BT
+/F1 10 Tf
+50 792 Td
+14 TL
+(  ? Customers have no auth.users accounts.) Tj
+T*
+(  ? Customer access is token-based \(raw token once; hash stored\).) Tj
+T*
+(  ? Business A cannot read Business B data \(membership + business_id RLS\).) Tj
+T*
+(  ? Staff cannot directly mutate queue_entries; must use transition_entry.) Tj
+T*
+(  ? SUPABASE_SERVICE_ROLE_KEY must never be exposed to the browser.) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(5. How to apply and validate) Tj
+/F1 10 Tf
+T*
+(============================) Tj
+T*
+(    npx supabase start) Tj
+T*
+(    npx supabase db reset     # or: npx supabase migration up --local) Tj
+T*
+(    npm run db:types) Tj
+T*
+(    npm run db:security-check) Tj
+T*
+(    npm run db:behavior-check) Tj
+T*
+(    npm run lint) Tj
+T*
+(    npm run typecheck) Tj
+T*
+(    npm run build) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(6. Environment variables) Tj
+/F1 10 Tf
+T*
+(========================) Tj
+T*
+(  ? NEXT_PUBLIC_SUPABASE_URL ? public project URL) Tj
+T*
+(  ? NEXT_PUBLIC_SUPABASE_ANON_KEY ? public anon key \(safe with RLS\)) Tj
+T*
+(  ? SUPABASE_SERVICE_ROLE_KEY ? server only \(lib/supabase/admin.ts\)) Tj
+T*
+() Tj
+T*
+/F2 11 Tf
+(7. Out of scope \(later phases\)) Tj
+/F1 10 Tf
+T*
+(==============================) Tj
+T*
+(  ? Phase 2: Auth + business provisioning UI) Tj
+T*
+(  ? Phase 3: Services/queues dashboard CRUD) Tj
+T*
+(  ? Phase 4: Public join + ticket pages) Tj
+T*
+(  ? Phase 5-6: Staff console + realtime) Tj
+T*
+(  ? Phase 7+: QR codes, team invites, hardening) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(Document generated for QueueLess Phase 1 ? database architecture and migrations.) Tj
+T*
+/F2 11 Tf
+(Source of truth for SQL remains supabase/migrations/.) Tj
+/F1 10 Tf
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 4 0 R >>
+endobj
+8 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+9 0 obj
+<< /Type /Pages /Count 3 /Kids [6 0 R 7 0 R 8 0 R] >>
+endobj
+10 0 obj
+<< /Type /Catalog /Pages 9 0 R >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000154 00000 n 
+0000003566 00000 n 
+0000007346 00000 n 
+0000009059 00000 n 
+0000009195 00000 n 
+0000009331 00000 n 
+0000009467 00000 n 
+0000009536 00000 n 
+trailer
+<< /Size 11 /Root 10 0 R >>
+startxref
+9586
+%%EOF
