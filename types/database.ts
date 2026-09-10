@@ -316,6 +316,31 @@ export type Database = {
         }
       }
       generate_access_token: { Args: never; Returns: string }
+      call_next_entry: {
+        Args: { p_queue_id: string }
+        Returns: {
+          called_at: string
+          id: string
+          public_id: string
+          queue_id: string
+          queue_number: number
+          status: Database["public"]["Enums"]["entry_status"]
+        }[]
+      }
+      get_public_queues: {
+        Args: { p_slug: string }
+        Returns: {
+          average_service_minutes: number
+          business_name: string
+          business_slug: string
+          current_number: number
+          queue_id: string
+          queue_name: string
+          queue_status: Database["public"]["Enums"]["queue_status"]
+          service_description: string | null
+          service_name: string
+        }[]
+      }
       get_ticket: {
         Args: { p_access_token: string; p_public_id: string }
         Returns: {

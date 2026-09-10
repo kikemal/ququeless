@@ -40,9 +40,23 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
     notFound();
   }
 
+  const { data: entries, error: entriesError } = await supabase
+    .from("queue_entries")
+    .select("id, public_id, customer_name, customer_phone, queue_number, status, joined_at")
+    .eq("queue_id", id)
+    .eq("business_id", business.id)
+    .order("joined_at", { ascending: true });
+
+  if (entriesError) console.error("QueueDetailPage entries error", entriesError.message);
+
   return (
-    <main>
+    <main className="space-y-6">
       <QueueDetail queue={data as QueueDetailData} />
+      <QueueEntriesManager
+        queueId={id}
+        queueStatus={data.status}
+        entries={(entries ?? []) as QueueEntry[]}
+      />
     </main>
   );
 }
