@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { setQueueStatusAction } from "@/app/(app)/dashboard/queues/actions";
+import { PublicQueueQr } from "@/components/dashboard/public-queue-qr";
 import { StatusBadge } from "@/components/dashboard/queues-manager";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,8 @@ export type QueueDetailData = Tables<"queues"> & {
 type QueueDetailProps = {
   queue: QueueDetailData;
   businessSlug: string;
+  businessName: string;
+  publicQueueUrl: string | null;
 };
 
 function formatTimestamp(value: string) {
@@ -37,7 +40,12 @@ function formatTimestamp(value: string) {
   }
 }
 
-export function QueueDetail({ queue, businessSlug }: QueueDetailProps) {
+export function QueueDetail({
+  queue,
+  businessSlug,
+  businessName,
+  publicQueueUrl,
+}: QueueDetailProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -130,20 +138,31 @@ export function QueueDetail({ queue, businessSlug }: QueueDetailProps) {
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          Public join link
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Share this page so customers can join without an account.
-        </p>
-        <Link
-          href={`/q/${businessSlug}`}
-          className="mt-3 inline-flex text-sm font-medium text-accent underline-offset-4 hover:underline"
-        >
-          /q/{businessSlug}
-        </Link>
-      </section>
+      {publicQueueUrl ? (
+        <PublicQueueQr
+          publicQueueUrl={publicQueueUrl}
+          businessName={businessName}
+          queueName={queue.name}
+          serviceName={queue.services?.name ?? "Service"}
+          slug={businessSlug}
+        />
+      ) : (
+        <section className="rounded-xl border border-border bg-surface p-5">
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Public Queue
+          </h2>
+          <p className="mt-2 text-sm text-muted" role="alert">
+            Public queue URL is unavailable. Set NEXT_PUBLIC_APP_URL and check
+            the business slug.
+          </p>
+          <Link
+            href={`/q/${businessSlug}`}
+            className="mt-3 inline-flex text-sm font-medium text-accent underline-offset-4 hover:underline"
+          >
+            /q/{businessSlug}
+          </Link>
+        </section>
+      )}
 
       <section className="rounded-xl border border-border bg-surface p-5">
         <h2 className="font-display text-lg font-semibold text-foreground">

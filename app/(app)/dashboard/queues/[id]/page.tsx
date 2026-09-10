@@ -11,6 +11,7 @@ import {
 } from "@/components/dashboard/queue-detail";
 import { requirePrimaryBusiness } from "@/lib/auth/business";
 import { requireAuthUser } from "@/lib/auth/session";
+import { buildPublicQueueUrl } from "@/lib/public-url";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -58,6 +59,8 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
       <QueueDetail
         queue={data as QueueDetailData}
         businessSlug={business.slug}
+        businessName={business.name}
+        publicQueueUrl={buildPublicQueueUrl(business.slug)}
       />
       <QueueEntriesManager
         queueId={id}
