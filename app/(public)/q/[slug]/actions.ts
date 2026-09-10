@@ -1,5 +1,6 @@
 "use server";
 
+import { mapJoinQueueErrorMessage } from "@/lib/dashboard/errors";
 import { createClient } from "@/lib/supabase/server";
 
 export type JoinQueueState = {
@@ -24,10 +25,21 @@ export async function joinQueueAction(
   const customerName = readString(formData, "customerName");
   const customerPhone = readString(formData, "customerPhone");
 
-  if (!queueId) return { error: "Queue not found." };
-  if (!customerName) return { error: "Your name is required." };
-  if (customerName.length > 120) return { error: "Your name is too long." };
-  if (customerPhone.length > 32) return { error: "Your phone number is too long." };
+  if (!queueId) {
+    return { error: "This queue could not be found." };
+  }
+
+  if (!customerName) {
+    return { error: "Your name is required." };
+  }
+
+  if (customerName.length > 120) {
+    return { error: "Your name is too long." };
+  }
+
+  if (customerPhone.length > 32) {
+    return { error: "Your phone number is too long." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("join_queue", {
@@ -37,22 +49,18 @@ export async function joinQueueAction(
   });
 
   if (error || !data?.[0]) {
-    console.error("joinQueueAction error", error?.message);
-    const message = error?.message ?? "Could not join this queue.";
-    if (message.toLowerCase().includes("not open")) {
-      return { error: "This queue is not accepting customers right now." };
-    }
-    if (message.toLowerCase().includes("inactive")) {
-      return { error: "This service is currently unavailable." };
-    }
-    return { error: message };
+    // Never log tokens or full customer PII.
+    console.error("joinQueueAction error", error?.code ?? "unknown");
+    return { error: mapJoinQueueErrorMessage(error?.message) };
   }
+
+  const row = data[0];
 
   return {
     ticket: {
-      publicId: data[0].public_id,
-      accessToken: data[0].access_token,
-      queueNumber: data[0].queue_number,
+      publicId: row.public_id,
+      accessToken: row.access_token,
+      queueNumber: row.queue_number,
     },
   };
 }

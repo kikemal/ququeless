@@ -161,7 +161,8 @@ export function TicketView({ publicId }: { publicId: string }) {
           </Button>
         ) : null}
         <p className="mt-4 text-xs text-muted">
-          This page checks for updates automatically.
+          Estimated wait is people ahead × average service minutes. This page
+          refreshes automatically.
         </p>
       </div>
     </main>

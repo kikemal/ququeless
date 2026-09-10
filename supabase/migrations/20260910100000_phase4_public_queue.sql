@@ -1,4 +1,6 @@
--- QueueLess Phase 4: public queue discovery and atomic next-ticket calling.
+-- QueueLess Phase 4: public queue discovery + atomic next-ticket calling.
+-- Reuses Phase 1 join_queue / get_ticket / cancel_ticket / transition_entry.
+-- Only adds capabilities Phase 1 did not expose to anon/authenticated clients.
 
 CREATE OR REPLACE FUNCTION public.get_public_queues(p_slug text)
 RETURNS TABLE (
@@ -17,8 +19,16 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT b.name, b.slug, q.id, q.name, q.status, q.current_number,
-         s.name, s.description, s.average_service_minutes
+  SELECT
+    b.name,
+    b.slug,
+    q.id,
+    q.name,
+    q.status,
+    q.current_number,
+    s.name,
+    s.description,
+    s.average_service_minutes
   FROM public.businesses b
   JOIN public.queues q ON q.business_id = b.id
   JOIN public.services s ON s.id = q.service_id
@@ -43,45 +53,70 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+#variable_conflict use_column
 DECLARE
   v_queue public.queues%ROWTYPE;
   v_entry public.queue_entries%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'Authentication required' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'Authentication required'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
 
-  SELECT * INTO v_queue FROM public.queues WHERE id = p_queue_id FOR UPDATE;
+  SELECT q.*
+  INTO v_queue
+  FROM public.queues AS q
+  WHERE q.id = p_queue_id
+  FOR UPDATE;
+
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Queue not found' USING ERRCODE = 'no_data_found';
+    RAISE EXCEPTION 'Queue not found'
+      USING ERRCODE = 'no_data_found';
   END IF;
 
   IF NOT public.is_business_member(v_queue.business_id) THEN
-    RAISE EXCEPTION 'Not a member of this business' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'Not a member of this business'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
 
   IF v_queue.status IS DISTINCT FROM 'open' THEN
-    RAISE EXCEPTION 'Queue is not open' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'Queue is not open'
+      USING ERRCODE = 'check_violation';
   END IF;
 
-  SELECT * INTO v_entry
-  FROM public.queue_entries
-  WHERE queue_id = p_queue_id AND status = 'waiting'
-  ORDER BY joined_at, queue_number
-  FOR UPDATE SKIP LOCKED LIMIT 1;
+  SELECT e.*
+  INTO v_entry
+  FROM public.queue_entries AS e
+  WHERE e.queue_id = p_queue_id
+    AND e.status = 'waiting'
+  ORDER BY e.joined_at, e.queue_number
+  FOR UPDATE SKIP LOCKED
+  LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'No waiting customers' USING ERRCODE = 'no_data_found';
+    RAISE EXCEPTION 'No waiting customers'
+      USING ERRCODE = 'no_data_found';
   END IF;
 
+  UPDATE public.queue_entries AS e
+  SET
+    status = 'called'::public.entry_status,
+    called_at = COALESCE(e.called_at, now())
+  WHERE e.id = v_entry.id;
+
   RETURN QUERY
-  UPDATE public.queue_entries
-  SET status = 'called', called_at = COALESCE(called_at, now())
-  WHERE queue_entries.id = v_entry.id
-  RETURNING queue_entries.id, queue_entries.public_id, queue_entries.queue_id,
-            queue_entries.queue_number, queue_entries.status, queue_entries.called_at;
+  SELECT
+    e.id,
+    e.public_id,
+    e.queue_id,
+    e.queue_number,
+    e.status,
+    e.called_at
+  FROM public.queue_entries AS e
+  WHERE e.id = v_entry.id;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.call_next_entry(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.call_next_entry(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.call_next_entry(uuid) TO authenticated;

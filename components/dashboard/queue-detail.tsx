@@ -23,6 +23,7 @@ export type QueueDetailData = Tables<"queues"> & {
 
 type QueueDetailProps = {
   queue: QueueDetailData;
+  businessSlug: string;
 };
 
 function formatTimestamp(value: string) {
@@ -36,7 +37,7 @@ function formatTimestamp(value: string) {
   }
 }
 
-export function QueueDetail({ queue }: QueueDetailProps) {
+export function QueueDetail({ queue, businessSlug }: QueueDetailProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -131,11 +132,25 @@ export function QueueDetail({ queue }: QueueDetailProps) {
 
       <section className="rounded-xl border border-border bg-surface p-5">
         <h2 className="font-display text-lg font-semibold text-foreground">
+          Public join link
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Share this page so customers can join without an account.
+        </p>
+        <Link
+          href={`/q/${businessSlug}`}
+          className="mt-3 inline-flex text-sm font-medium text-accent underline-offset-4 hover:underline"
+        >
+          /q/{businessSlug}
+        </Link>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="font-display text-lg font-semibold text-foreground">
           Queue status
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Use the existing open, paused, and closed states. Customer joining and
-          calling arrive in a later phase.
+          Open queues accept new customers. Paused and closed queues stop joining.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {QUEUE_STATUSES.map((status) => (

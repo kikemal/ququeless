@@ -55,7 +55,10 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
 
   return (
     <main className="space-y-6">
-      <QueueDetail queue={data as QueueDetailData} />
+      <QueueDetail
+        queue={data as QueueDetailData}
+        businessSlug={business.slug}
+      />
       <QueueEntriesManager
         queueId={id}
         queueStatus={data.status}
