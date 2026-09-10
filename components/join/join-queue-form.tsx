@@ -25,6 +25,10 @@ export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
           `queueless-ticket:${result.ticket.publicId}`,
           result.ticket.accessToken,
         );
+        window.sessionStorage.setItem(
+          `queueless-queue:${result.ticket.publicId}`,
+          queueId,
+        );
         router.push(`/ticket/${result.ticket.publicId}`);
       }
       return result;

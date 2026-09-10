@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 
 import {
   callNextEntryAction,
   transitionEntryAction,
 } from "@/app/(app)/dashboard/queues/[id]/actions";
+import { LiveStatusBadge } from "@/components/ui/live-status-badge";
 import { Button } from "@/components/ui/button";
+import { useQueueEntriesLive } from "@/hooks/use-live-queue";
 import type { Enums, Tables } from "@/types/database";
 
 export type QueueEntry = Pick<
@@ -43,6 +45,15 @@ export function QueueEntriesManager({
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const refresh = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const liveStatus = useQueueEntriesLive({
+    queueId,
+    onChange: refresh,
+  });
+
   const active = entries.filter((entry) => activeStatuses.has(entry.status));
   const waitingCount = entries.filter((entry) => entry.status === "waiting")
     .length;
@@ -67,9 +78,12 @@ export function QueueEntriesManager({
     <section className="rounded-xl border border-border bg-surface p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Customers
-          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="font-display text-lg font-semibold text-foreground">
+              Customers
+            </h2>
+            <LiveStatusBadge status={liveStatus} />
+          </div>
           <p className="mt-1 text-sm text-muted">
             {active.length} active · {waitingCount} waiting
           </p>

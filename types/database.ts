@@ -348,6 +348,7 @@ export type Database = {
           estimated_wait_minutes: number
           people_ahead: number
           public_id: string
+          queue_id: string
           queue_name: string
           queue_number: number
           service_name: string

@@ -18,7 +18,8 @@
     "db:behavior-check": "supabase db query --local -f tests/integration/phase1_behavior_checks.sql",
     "db:phase2-check": "supabase db query --local -f tests/integration/phase2_onboarding_checks.sql",
     "db:phase3-check": "supabase db query --local -f tests/integration/phase3_services_queues_checks.sql",
-    "db:phase4-check": "supabase db query --local -f tests/integration/phase4_public_queue_checks.sql"
+    "db:phase4-check": "supabase db query --local -f tests/integration/phase4_public_queue_checks.sql",
+    "db:phase5b-check": "supabase db query --local -f tests/integration/phase5b_live_updates_checks.sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

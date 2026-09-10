@@ -6,6 +6,7 @@ import type { Enums } from "@/types/database";
 
 export type TicketData = {
   public_id: string;
+  queue_id: string;
   queue_number: number;
   status: Enums<"entry_status">;
   people_ahead: number;

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   cancelTicketAction,
   getTicketAction,
   type TicketData,
 } from "@/app/(public)/ticket/[publicId]/actions";
+import { LiveStatusBadge } from "@/components/ui/live-status-badge";
 import { Button } from "@/components/ui/button";
+import { useQueueRefreshSignal } from "@/hooks/use-live-queue";
+import { TERMINAL_ENTRY_STATUSES } from "@/lib/realtime/channels";
 
 const labels: Record<TicketData["status"], string> = {
   waiting: "Waiting",
@@ -18,53 +21,72 @@ const labels: Record<TicketData["status"], string> = {
   no_show: "No-show",
 };
 
+function ticketTokenKey(publicId: string) {
+  return `queueless-ticket:${publicId}`;
+}
+
+function queueIdKey(publicId: string) {
+  return `queueless-queue:${publicId}`;
+}
+
 export function TicketView({ publicId }: { publicId: string }) {
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [canceling, setCanceling] = useState(false);
 
+  const isTerminal = ticket
+    ? TERMINAL_ENTRY_STATUSES.has(ticket.status)
+    : false;
+
+  const refreshTicket = useCallback(async () => {
+    const token = window.sessionStorage.getItem(ticketTokenKey(publicId));
+    if (!token) {
+      setError("Your ticket access token is not available on this device.");
+      return;
+    }
+
+    const result = await getTicketAction(publicId, token);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    const next = result.ticket ?? null;
+    setError(null);
+    setTicket(next);
+
+    if (next?.queue_id) {
+      window.sessionStorage.setItem(queueIdKey(publicId), next.queue_id);
+    }
+  }, [publicId]);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadTicket() {
-      const token = window.sessionStorage.getItem(`queueless-ticket:${publicId}`);
-      if (!token) {
-        await Promise.resolve();
-        if (!cancelled) {
-          setError("Your ticket access token is not available on this device.");
-        }
-        return;
-      }
-
-      const result = await getTicketAction(publicId, token);
+    async function initialLoad() {
+      await Promise.resolve();
       if (cancelled) {
         return;
       }
-
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setError(null);
-        setTicket(result.ticket ?? null);
-      }
+      await refreshTicket();
     }
 
-    const initial = window.setTimeout(() => {
-      void loadTicket();
-    }, 0);
-    const interval = window.setInterval(() => {
-      void loadTicket();
-    }, 10000);
-
+    void initialLoad();
     return () => {
       cancelled = true;
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
     };
-  }, [publicId]);
+  }, [refreshTicket]);
+
+  const liveStatus = useQueueRefreshSignal({
+    queueId: ticket?.queue_id ?? null,
+    enabled: Boolean(ticket?.queue_id) && !isTerminal,
+    onSignal: () => {
+      void refreshTicket();
+    },
+  });
 
   async function cancel() {
-    const token = window.sessionStorage.getItem(`queueless-ticket:${publicId}`);
+    const token = window.sessionStorage.getItem(ticketTokenKey(publicId));
     if (!token || !window.confirm("Leave this queue?")) {
       return;
     }
@@ -78,13 +100,7 @@ export function TicketView({ publicId }: { publicId: string }) {
       return;
     }
 
-    const refreshed = await getTicketAction(publicId, token);
-    if (refreshed.error) {
-      setError(refreshed.error);
-    } else {
-      setError(null);
-      setTicket(refreshed.ticket ?? null);
-    }
+    await refreshTicket();
   }
 
   if (error && !ticket) {
@@ -117,7 +133,10 @@ export function TicketView({ publicId }: { publicId: string }) {
   return (
     <main className="mx-auto w-full max-w-xl px-5 py-10 sm:px-6">
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-sm sm:p-8">
-        <p className="text-sm font-medium text-accent">{ticket.business_name}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium text-accent">{ticket.business_name}</p>
+          {!isTerminal ? <LiveStatusBadge status={liveStatus} /> : null}
+        </div>
         <h1 className="mt-2 font-display text-2xl font-semibold text-foreground">
           {ticket.service_name}
         </h1>
@@ -162,7 +181,7 @@ export function TicketView({ publicId }: { publicId: string }) {
         ) : null}
         <p className="mt-4 text-xs text-muted">
           Estimated wait is people ahead × average service minutes. This page
-          refreshes automatically.
+          updates automatically while you wait.
         </p>
       </div>
     </main>
