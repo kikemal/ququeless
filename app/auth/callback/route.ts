@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -12,8 +13,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      const safeNext =
-        next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      const safeNext = getSafeAuthRedirect(next) ?? "/dashboard";
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
 

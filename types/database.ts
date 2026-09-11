@@ -34,6 +34,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_invitations: {
+        Row: {
+          accepted_at: string | null
+          business_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          business_id: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          business_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_invitations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_members: {
         Row: {
           business_id: string
@@ -280,6 +324,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_business_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          role: Database["public"]["Enums"]["member_role"]
+        }[]
+      }
       cancel_ticket: {
         Args: { p_access_token: string; p_public_id: string }
         Returns: {
@@ -315,7 +367,56 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_business_invitation: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          expires_at: string
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       generate_access_token: { Args: never; Returns: string }
+      get_invitation_preview: {
+        Args: { p_token: string }
+        Returns: {
+          business_name: string
+          email: string
+          expires_at: string
+          status: string
+        }[]
+      }
+      list_business_team: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          membership_id: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }[]
+      }
+      list_pending_invitations: {
+        Args: never
+        Returns: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+        }[]
+      }
+      normalize_invite_email: { Args: { p_email: string }; Returns: string }
+      remove_staff_member: {
+        Args: { p_membership_id: string }
+        Returns: boolean
+      }
+      revoke_business_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: boolean
+      }
       call_next_entry: {
         Args: { p_queue_id: string }
         Returns: {

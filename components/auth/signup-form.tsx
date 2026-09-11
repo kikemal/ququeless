@@ -10,7 +10,12 @@ import { Label } from "@/components/ui/label";
 
 const initialState: AuthActionState = {};
 
-export function SignupForm() {
+type SignupFormProps = {
+  nextPath?: string;
+  defaultEmail?: string;
+};
+
+export function SignupForm({ nextPath, defaultEmail }: SignupFormProps) {
   const [state, formAction, pending] = useActionState(signupAction, initialState);
 
   if (state.needsEmailConfirmation) {
@@ -28,7 +33,11 @@ export function SignupForm() {
         </p>
         <p className="mt-4 text-sm text-muted">
           <Link
-            href="/login"
+            href={
+              nextPath
+                ? `/login?next=${encodeURIComponent(nextPath)}`
+                : "/login"
+            }
             className="font-medium text-accent underline-offset-4 hover:underline"
           >
             Go to log in
@@ -40,6 +49,8 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="mt-8 space-y-5" noValidate>
+      {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
+
       {state.error ? (
         <p
           className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
@@ -71,6 +82,7 @@ export function SignupForm() {
           autoComplete="email"
           required
           disabled={pending}
+          defaultValue={defaultEmail}
           placeholder="you@business.com"
         />
       </div>

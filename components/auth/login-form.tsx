@@ -65,7 +65,11 @@ export function LoginForm({ nextPath, authError }: LoginFormProps) {
       <p className="text-sm text-muted">
         Need an account?{" "}
         <Link
-          href="/signup"
+          href={
+            nextPath
+              ? `/signup?next=${encodeURIComponent(nextPath)}`
+              : "/signup"
+          }
           className="font-medium text-accent underline-offset-4 hover:underline"
         >
           Sign up

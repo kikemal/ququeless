@@ -58,6 +58,44 @@ export async function requirePrimaryBusiness(
   return business;
 }
 
+export type PrimaryMembership = {
+  businessId: string;
+  role: Tables<"business_members">["role"];
+  membershipId: string;
+};
+
+/**
+ * Oldest membership for the user (primary business), including role.
+ */
+export async function getPrimaryMembership(
+  userId: string,
+): Promise<PrimaryMembership | null> {
+  const supabase = await createClient();
+
+  const { data: membership, error } = await supabase
+    .from("business_members")
+    .select("id, business_id, role, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getPrimaryMembership error", error.message);
+    return null;
+  }
+
+  if (!membership) {
+    return null;
+  }
+
+  return {
+    businessId: membership.business_id,
+    role: membership.role,
+    membershipId: membership.id,
+  };
+}
+
 export async function getProfileSummary(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

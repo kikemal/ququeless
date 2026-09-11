@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { mapAuthErrorMessage, mapBusinessErrorMessage } from "@/lib/auth/errors";
 import { getPrimaryBusiness } from "@/lib/auth/business";
+import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 import { slugifyBusinessName, slugWithSuffix } from "@/lib/business/slug";
 import { isBusinessType } from "@/lib/business/types";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +30,8 @@ export async function signupAction(
   const email = readString(formData, "email");
   const password = readString(formData, "password");
   const confirmPassword = readString(formData, "confirmPassword");
+  const nextPath = readString(formData, "next");
+  const safeNext = getSafeAuthRedirect(nextPath);
 
   if (!fullName || !email || !password || !confirmPassword) {
     return { error: "Please fill in all fields." };
@@ -54,6 +57,10 @@ export async function signupAction(
     process.env.NEXT_PUBLIC_SITE_URL ??
     "http://localhost:3000";
 
+  const emailRedirectTo = safeNext
+    ? `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+    : `${origin}/auth/callback`;
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -61,7 +68,7 @@ export async function signupAction(
       data: {
         full_name: fullName,
       },
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo,
     },
   });
 
@@ -76,6 +83,10 @@ export async function signupAction(
       message:
         "Account created. Check your email to confirm your address, then log in.",
     };
+  }
+
+  if (safeNext) {
+    redirect(safeNext);
   }
 
   redirect("/onboarding");
@@ -104,17 +115,14 @@ export async function loginAction(
     return { error: mapAuthErrorMessage(error?.message) };
   }
 
+  const safeNext = getSafeAuthRedirect(nextPath);
+  if (safeNext) {
+    redirect(safeNext);
+  }
+
   const business = await getPrimaryBusiness(data.user.id);
   if (!business) {
     redirect("/onboarding");
-  }
-
-  if (
-    nextPath.startsWith("/dashboard") &&
-    !nextPath.startsWith("//") &&
-    nextPath.startsWith("/")
-  ) {
-    redirect(nextPath);
   }
 
   redirect("/dashboard");

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
@@ -23,6 +24,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && AUTH_ROUTES.has(pathname)) {
+    const nextParam = request.nextUrl.searchParams.get("next");
+    const safeNext = getSafeAuthRedirect(nextParam);
+    if (safeNext) {
+      const inviteUrl = request.nextUrl.clone();
+      inviteUrl.pathname = safeNext;
+      inviteUrl.search = "";
+      return NextResponse.redirect(inviteUrl);
+    }
+
     const { data: memberships, error } = await supabase
       .from("business_members")
       .select("business_id")

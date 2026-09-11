@@ -3,12 +3,28 @@ import Link from "next/link";
 
 import { SignupForm } from "@/components/auth/signup-form";
 import { Container } from "@/components/ui/container";
+import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 
 export const metadata: Metadata = {
   title: "Sign up",
 };
 
-export default function SignupPage() {
+type SignupPageProps = {
+  searchParams: Promise<{ next?: string; email?: string }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
+  const params = await searchParams;
+  const nextPath = getSafeAuthRedirect(params.next) ?? undefined;
+  const defaultEmail =
+    typeof params.email === "string" && params.email.includes("@")
+      ? params.email.trim().toLowerCase()
+      : undefined;
+
+  const loginHref = nextPath
+    ? `/login?next=${encodeURIComponent(nextPath)}`
+    : "/login";
+
   return (
     <Container
       as="main"
@@ -20,15 +36,17 @@ export default function SignupPage() {
           Create your account
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted">
-          Sign up to set up your business and start managing digital queues.
+          {nextPath?.startsWith("/invite/")
+            ? "Create an account with the invited email to join the team."
+            : "Sign up to set up your business and start managing digital queues."}
         </p>
 
-        <SignupForm />
+        <SignupForm nextPath={nextPath} defaultEmail={defaultEmail} />
 
         <p className="mt-6 text-sm text-muted">
           Already have an account?{" "}
           <Link
-            href="/login"
+            href={loginHref}
             className="font-medium text-accent underline-offset-4 hover:underline"
           >
             Log in
