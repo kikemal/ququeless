@@ -110,6 +110,69 @@ export type Database = {
           },
         ]
       }
+      customer_notifications: {
+        Row: {
+          attempts: number
+          business_id: string
+          channel: Database["public"]["Enums"]["customer_notification_channel"]
+          created_at: string
+          id: string
+          last_error: string | null
+          provider_message_id: string | null
+          queue_entry_id: string
+          recipient: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["customer_notification_status"]
+          type: Database["public"]["Enums"]["customer_notification_type"]
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          business_id: string
+          channel?: Database["public"]["Enums"]["customer_notification_channel"]
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          provider_message_id?: string | null
+          queue_entry_id: string
+          recipient: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["customer_notification_status"]
+          type: Database["public"]["Enums"]["customer_notification_type"]
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          business_id?: string
+          channel?: Database["public"]["Enums"]["customer_notification_channel"]
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          provider_message_id?: string | null
+          queue_entry_id?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["customer_notification_status"]
+          type?: Database["public"]["Enums"]["customer_notification_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notifications_queue_entry_id_fkey"
+            columns: ["queue_entry_id"]
+            isOneToOne: false
+            referencedRelation: "queue_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           business_type: string
@@ -172,9 +235,12 @@ export type Database = {
           access_token_hash: string
           business_id: string
           called_at: string | null
+          cancelled_at: string | null
           completed_at: string | null
+          customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          email_notifications_enabled: boolean
           id: string
           joined_at: string
           public_id: string
@@ -187,9 +253,12 @@ export type Database = {
           access_token_hash: string
           business_id: string
           called_at?: string | null
+          cancelled_at?: string | null
           completed_at?: string | null
+          customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          email_notifications_enabled?: boolean
           id?: string
           joined_at?: string
           public_id?: string
@@ -202,9 +271,12 @@ export type Database = {
           access_token_hash?: string
           business_id?: string
           called_at?: string | null
+          cancelled_at?: string | null
           completed_at?: string | null
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          email_notifications_enabled?: boolean
           id?: string
           joined_at?: string
           public_id?: string
@@ -442,10 +514,15 @@ export type Database = {
           service_name: string
         }[]
       }
+      get_my_business_analytics: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
       get_ticket: {
         Args: { p_access_token: string; p_public_id: string }
         Returns: {
           business_name: string
+          email_notifications_enabled: boolean
           estimated_wait_minutes: number
           people_ahead: number
           public_id: string
@@ -461,6 +538,7 @@ export type Database = {
       is_business_owner: { Args: { p_business_id: string }; Returns: boolean }
       join_queue: {
         Args: {
+          p_customer_email?: string
           p_customer_name: string
           p_customer_phone?: string
           p_queue_id: string
@@ -471,6 +549,54 @@ export type Database = {
           queue_number: number
           status: Database["public"]["Enums"]["entry_status"]
         }[]
+      }
+      claim_customer_notifications_for_entry: {
+        Args: { p_entry_id: string }
+        Returns: {
+          attempts: number
+          business_name: string
+          channel: Database["public"]["Enums"]["customer_notification_channel"]
+          id: string
+          public_id: string
+          queue_name: string
+          queue_number: number
+          recipient: string
+          type: Database["public"]["Enums"]["customer_notification_type"]
+        }[]
+      }
+      claim_customer_notifications_for_ticket: {
+        Args: { p_access_token: string; p_public_id: string }
+        Returns: {
+          attempts: number
+          business_name: string
+          channel: Database["public"]["Enums"]["customer_notification_channel"]
+          id: string
+          public_id: string
+          queue_name: string
+          queue_number: number
+          recipient: string
+          type: Database["public"]["Enums"]["customer_notification_type"]
+        }[]
+      }
+      finalize_customer_notification: {
+        Args: {
+          p_error?: string
+          p_notification_id: string
+          p_provider_message_id?: string
+          p_success: boolean
+        }
+        Returns: boolean
+      }
+      finalize_customer_notification_for_ticket: {
+        Args: {
+          p_access_token: string
+          p_error?: string
+          p_notification_id: string
+          p_provider_message_id?: string
+          p_public_id: string
+          p_success: boolean
+        }
+        Returns: boolean
       }
       transition_entry: {
         Args: {
@@ -490,6 +616,17 @@ export type Database = {
       }
     }
     Enums: {
+      customer_notification_channel: "email"
+      customer_notification_status:
+        | "pending"
+        | "sending"
+        | "sent"
+        | "failed"
+      customer_notification_type:
+        | "called"
+        | "completed"
+        | "skipped"
+        | "cancelled"
       entry_status:
         | "waiting"
         | "called"
@@ -629,6 +766,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      customer_notification_channel: ["email"],
+      customer_notification_status: ["pending", "sending", "sent", "failed"],
+      customer_notification_type: [
+        "called",
+        "completed",
+        "skipped",
+        "cancelled",
+      ],
       entry_status: [
         "waiting",
         "called",

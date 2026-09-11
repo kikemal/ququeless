@@ -18,10 +18,15 @@ export type QueueEntry = Pick<
   | "public_id"
   | "customer_name"
   | "customer_phone"
+  | "customer_email"
+  | "email_notifications_enabled"
   | "queue_number"
   | "status"
   | "joined_at"
->;
+> & {
+  latest_notification_status?: string | null;
+  latest_notification_type?: string | null;
+};
 
 type Props = {
   queueId: string;
@@ -127,6 +132,7 @@ export function QueueEntriesManager({
                 <th className="px-3 py-3 font-medium">Customer</th>
                 <th className="px-3 py-3 font-medium">Joined</th>
                 <th className="px-3 py-3 font-medium">Status</th>
+                <th className="px-3 py-3 font-medium">Email</th>
                 <th className="px-3 py-3 font-medium">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -155,6 +161,18 @@ export function QueueEntriesManager({
                   </td>
                   <td className="px-3 py-4 capitalize text-muted">
                     {entry.status.replace("_", " ")}
+                  </td>
+                  <td className="px-3 py-4 text-xs text-muted">
+                    {entry.email_notifications_enabled ? (
+                      <span>
+                        On
+                        {entry.latest_notification_status
+                          ? ` · ${entry.latest_notification_type ?? "update"} ${entry.latest_notification_status}`
+                          : ""}
+                      </span>
+                    ) : (
+                      "Off"
+                    )}
                   </td>
                   <td className="px-3 py-4">
                     <div className="flex flex-wrap justify-end gap-2">

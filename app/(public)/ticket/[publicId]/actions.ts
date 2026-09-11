@@ -1,6 +1,7 @@
 "use server";
 
 import { mapTicketErrorMessage } from "@/lib/dashboard/errors";
+import { processNotificationsForTicket } from "@/lib/notifications/process";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 
@@ -14,6 +15,7 @@ export type TicketData = {
   service_name: string;
   business_name: string;
   queue_name: string;
+  email_notifications_enabled: boolean;
 };
 
 export async function getTicketAction(publicId: string, accessToken: string) {
@@ -50,6 +52,9 @@ export async function cancelTicketAction(publicId: string, accessToken: string) 
     console.error("cancelTicketAction error", error.code);
     return { error: mapTicketErrorMessage(error.message) };
   }
+
+  // Delivery is best-effort and must not undo cancellation.
+  await processNotificationsForTicket(publicId, accessToken);
 
   return { success: true };
 }

@@ -94,7 +94,7 @@ BEGIN
   END IF;
 
   -- Customer RPCs must be executable by anon
-  IF NOT HAS_FUNCTION_PRIVILEGE('anon', 'public.join_queue(uuid, text, text)', 'EXECUTE') THEN
+  IF NOT HAS_FUNCTION_PRIVILEGE('anon', 'public.join_queue(uuid, text, text, text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'SECURITY FAIL: anon missing join_queue EXECUTE';
   END IF;
 

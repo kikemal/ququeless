@@ -47,12 +47,51 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
 
   const { data: entries, error: entriesError } = await supabase
     .from("queue_entries")
-    .select("id, public_id, customer_name, customer_phone, queue_number, status, joined_at")
+    .select(
+      "id, public_id, customer_name, customer_phone, customer_email, email_notifications_enabled, queue_number, status, joined_at",
+    )
     .eq("queue_id", id)
     .eq("business_id", business.id)
     .order("joined_at", { ascending: true });
 
   if (entriesError) console.error("QueueDetailPage entries error", entriesError.message);
+
+  const entryIds = (entries ?? []).map((entry) => entry.id);
+  const notificationByEntry = new Map<
+    string,
+    { status: string; type: string }
+  >();
+
+  if (entryIds.length > 0) {
+    const { data: notifications, error: notificationError } = await supabase
+      .from("customer_notifications")
+      .select("queue_entry_id, status, type, created_at")
+      .eq("business_id", business.id)
+      .in("queue_entry_id", entryIds)
+      .order("created_at", { ascending: false });
+
+    if (notificationError) {
+      console.error("QueueDetailPage notifications error", notificationError.message);
+    } else {
+      for (const row of notifications ?? []) {
+        if (!notificationByEntry.has(row.queue_entry_id)) {
+          notificationByEntry.set(row.queue_entry_id, {
+            status: row.status,
+            type: row.type,
+          });
+        }
+      }
+    }
+  }
+
+  const enrichedEntries: QueueEntry[] = (entries ?? []).map((entry) => {
+    const latest = notificationByEntry.get(entry.id);
+    return {
+      ...entry,
+      latest_notification_status: latest?.status ?? null,
+      latest_notification_type: latest?.type ?? null,
+    };
+  });
 
   return (
     <main className="space-y-6">
@@ -65,7 +104,7 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
       <QueueEntriesManager
         queueId={id}
         queueStatus={data.status}
-        entries={(entries ?? []) as QueueEntry[]}
+        entries={enrichedEntries}
       />
     </main>
   );

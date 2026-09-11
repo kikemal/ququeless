@@ -162,6 +162,12 @@ export function TicketView({ publicId }: { publicId: string }) {
           />
         </div>
 
+        {ticket.email_notifications_enabled ? (
+          <p className="mt-4 text-xs text-muted">
+            Email updates are enabled for this ticket.
+          </p>
+        ) : null}
+
         {error ? (
           <p className="mt-4 text-sm text-danger" role="alert">
             {error}

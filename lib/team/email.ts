@@ -1,15 +1,9 @@
 /**
- * Normalize invitation emails consistently (trim + lowercase).
+ * Invite-specific re-exports kept for Phase 6 call sites.
+ * Implementation lives in lib/email/address.ts.
  */
-export function normalizeInviteEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
 
-export function isValidInviteEmail(email: string): boolean {
-  const normalized = normalizeInviteEmail(email);
-  if (!normalized || normalized.includes(" ")) {
-    return false;
-  }
-  // Practical check — not a full RFC parser.
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
-}
+export {
+  normalizeEmail as normalizeInviteEmail,
+  isValidEmail as isValidInviteEmail,
+} from "@/lib/email/address";

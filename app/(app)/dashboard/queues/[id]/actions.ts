@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getPrimaryBusiness } from "@/lib/auth/business";
 import { mapQueueEntryErrorMessage } from "@/lib/dashboard/errors";
+import { processNotificationsForEntry } from "@/lib/notifications/process";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 
@@ -95,6 +96,8 @@ export async function callNextEntryAction(
     return { error: mapQueueEntryErrorMessage(error?.message) };
   }
 
+  await processNotificationsForEntry(data[0].id);
+
   revalidatePath(`/dashboard/queues/${ctx.queue.id}`);
   return {
     success: true,
@@ -155,6 +158,8 @@ export async function transitionEntryAction(
     console.error("transitionEntryAction error", error?.code ?? "unknown");
     return { error: mapQueueEntryErrorMessage(error?.message) };
   }
+
+  await processNotificationsForEntry(entry.id);
 
   revalidatePath(`/dashboard/queues/${data[0].queue_id}`);
   return { success: true, message: "Customer status updated." };

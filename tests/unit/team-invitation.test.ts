@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getSafeAuthRedirect } from "../../lib/auth/redirect.ts";
 import {
-  isValidInviteEmail,
-  normalizeInviteEmail,
-} from "../../lib/team/email.ts";
+  isValidEmail as isValidInviteEmail,
+  normalizeEmail as normalizeInviteEmail,
+} from "../../lib/email/address.ts";
 import {
   buildInvitePath,
   buildInviteUrl,
   invitationStatus,
   isInvitationAcceptable,
 } from "../../lib/team/invitation.ts";
+import { getSafeAuthRedirect } from "../../lib/auth/redirect.ts";
 
 describe("normalizeInviteEmail", () => {
   it("trims and lowercases", () => {

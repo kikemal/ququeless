@@ -1,6 +1,7 @@
 "use server";
 
 import { mapJoinQueueErrorMessage } from "@/lib/dashboard/errors";
+import { isValidEmail, normalizeEmail } from "@/lib/email/address";
 import { createClient } from "@/lib/supabase/server";
 
 export type JoinQueueState = {
@@ -24,6 +25,7 @@ export async function joinQueueAction(
   const queueId = readString(formData, "queueId");
   const customerName = readString(formData, "customerName");
   const customerPhone = readString(formData, "customerPhone");
+  const customerEmailRaw = readString(formData, "customerEmail");
 
   if (!queueId) {
     return { error: "This queue could not be found." };
@@ -41,11 +43,21 @@ export async function joinQueueAction(
     return { error: "Your phone number is too long." };
   }
 
+  let customerEmail: string | undefined;
+  if (customerEmailRaw) {
+    const normalized = normalizeEmail(customerEmailRaw);
+    if (!isValidEmail(normalized)) {
+      return { error: "Enter a valid email address, or leave it blank." };
+    }
+    customerEmail = normalized;
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("join_queue", {
     p_queue_id: queueId,
     p_customer_name: customerName,
     p_customer_phone: customerPhone || undefined,
+    p_customer_email: customerEmail,
   });
 
   if (error || !data?.[0]) {

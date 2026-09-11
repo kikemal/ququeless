@@ -66,6 +66,23 @@ export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
           disabled={disabled}
         />
       </div>
+      <div>
+        <Label htmlFor={`customer-email-${queueId}`}>
+          Email <span className="font-normal text-muted">(optional)</span>
+        </Label>
+        <Input
+          id={`customer-email-${queueId}`}
+          name="customerEmail"
+          type="email"
+          placeholder="you@example.com"
+          autoComplete="email"
+          maxLength={254}
+          disabled={disabled}
+        />
+        <p className="mt-1.5 text-xs text-muted">
+          Optional — we&apos;ll use this to send updates about your queue ticket.
+        </p>
+      </div>
       {state.error ? (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger" role="alert">
           {state.error}

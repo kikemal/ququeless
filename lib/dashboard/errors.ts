@@ -103,6 +103,10 @@ export function mapJoinQueueErrorMessage(message: string | undefined): string {
     return "Your phone number is too long.";
   }
 
+  if (value.includes("valid email")) {
+    return "Enter a valid email address, or leave it blank.";
+  }
+
   if (value.includes("queue not found") || value.includes("no_data_found")) {
     return "This queue could not be found.";
   }
