@@ -629,15 +629,22 @@ export type Database = {
       get_ticket: {
         Args: { p_access_token: string; p_public_id: string }
         Returns: {
+          business_is_open: boolean
           business_name: string
+          called_at: string | null
+          cancelled_at: string | null
+          completed_at: string | null
           email_notifications_enabled: boolean
           estimated_wait_minutes: number
+          joined_at: string
           people_ahead: number
           public_id: string
           queue_id: string
           queue_name: string
           queue_number: number
+          queue_status: Database["public"]["Enums"]["queue_status"]
           service_name: string
+          serving_at: string | null
           status: Database["public"]["Enums"]["entry_status"]
         }[]
       }

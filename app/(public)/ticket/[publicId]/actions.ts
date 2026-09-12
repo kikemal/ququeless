@@ -7,6 +7,7 @@ import type { Enums } from "@/types/database";
 
 export type TicketData = {
   public_id: string;
+  /** Used only for realtime channel subscription — never shown in UI. */
   queue_id: string;
   queue_number: number;
   status: Enums<"entry_status">;
@@ -16,6 +17,13 @@ export type TicketData = {
   business_name: string;
   queue_name: string;
   email_notifications_enabled: boolean;
+  joined_at: string | null;
+  called_at: string | null;
+  serving_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  queue_status: Enums<"queue_status">;
+  business_is_open: boolean;
 };
 
 export async function getTicketAction(publicId: string, accessToken: string) {
