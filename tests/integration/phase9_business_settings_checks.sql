@@ -214,6 +214,8 @@ BEGIN
     'Phase 9 Clinic B Updated', NULL, NULL, NULL, NULL, 'minimal'
   );
 
+  -- Privileged verification (RLS would hide business A from owner B)
+  RESET ROLE;
   IF EXISTS (
     SELECT 1 FROM public.businesses
     WHERE id = v_business_a.id AND name = 'Phase 9 Clinic B Updated'
