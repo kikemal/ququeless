@@ -1,3 +1,36 @@
+export function mapAnalyticsExportErrorMessage(
+  message: string | undefined,
+): string {
+  const value = (message ?? "").toLowerCase();
+
+  if (
+    value.includes("authentication required") ||
+    value.includes("jwt") ||
+    value.includes("session")
+  ) {
+    return "Your session expired. Please log in again.";
+  }
+
+  if (
+    value.includes("business membership required") ||
+    value.includes("insufficient_privilege") ||
+    value.includes("permission denied") ||
+    value.includes("42501")
+  ) {
+    return "You do not have permission to export analytics.";
+  }
+
+  if (value.includes("invalid date range") || value.includes("date range too large")) {
+    return "Choose a valid date range.";
+  }
+
+  if (value.includes("network") || value.includes("fetch")) {
+    return "Network error. Check your connection and try again.";
+  }
+
+  return "Could not export analytics. Please try again.";
+}
+
 export function mapSettingsErrorMessage(message: string | undefined): string {
   const value = (message ?? "").toLowerCase();
 

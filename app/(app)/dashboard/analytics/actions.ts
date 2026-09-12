@@ -2,9 +2,14 @@
 
 import { getPrimaryBusiness } from "@/lib/auth/business";
 import {
+  buildAnalyticsCsv,
+  buildAnalyticsExportFilename,
+} from "@/lib/analytics/csv";
+import {
   resolveAnalyticsRange,
   type AnalyticsPreset,
 } from "@/lib/analytics/metrics";
+import { mapAnalyticsExportErrorMessage } from "@/lib/dashboard/errors";
 import { createClient } from "@/lib/supabase/server";
 
 export type AnalyticsOverview = {
@@ -59,6 +64,12 @@ export type AnalyticsLoadResult = {
   data?: AnalyticsPayload;
 };
 
+export type AnalyticsExportResult = {
+  error?: string;
+  csv?: string;
+  filename?: string;
+};
+
 export async function loadBusinessAnalytics(input: {
   preset: AnalyticsPreset;
   customStart?: string | null;
@@ -101,4 +112,61 @@ export async function loadBusinessAnalytics(input: {
 
   const payload = data as AnalyticsPayload;
   return { data: payload };
+}
+
+/**
+ * Export aggregate analytics CSV for the caller's primary business.
+ * Client may only supply date-range params — never business_id.
+ */
+export async function exportBusinessAnalyticsCsv(input: {
+  preset: AnalyticsPreset;
+  customStart?: string | null;
+  customEnd?: string | null;
+}): Promise<AnalyticsExportResult> {
+  const range = resolveAnalyticsRange(
+    input.preset,
+    new Date(),
+    input.customStart,
+    input.customEnd,
+  );
+
+  if ("error" in range) {
+    return { error: range.error };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Your session expired. Please log in again." };
+  }
+
+  const business = await getPrimaryBusiness(user.id);
+  if (!business) {
+    return { error: "Create your business before exporting analytics." };
+  }
+
+  const { data, error } = await supabase.rpc("get_my_business_analytics", {
+    p_start: range.start.toISOString(),
+    p_end: range.end.toISOString(),
+  });
+
+  if (error || !data) {
+    console.error("exportBusinessAnalyticsCsv", error?.code ?? "unknown");
+    return { error: mapAnalyticsExportErrorMessage(error?.message) };
+  }
+
+  const payload = data as AnalyticsPayload;
+  const generatedAt = new Date();
+  const csv = buildAnalyticsCsv({
+    businessName: business.name,
+    range,
+    payload,
+    generatedAt,
+  });
+  const filename = buildAnalyticsExportFilename(range);
+
+  return { csv, filename };
 }

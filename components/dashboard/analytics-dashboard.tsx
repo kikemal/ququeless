@@ -3,7 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import type { AnalyticsPayload } from "@/app/(app)/dashboard/analytics/actions";
+import {
+  exportBusinessAnalyticsCsv,
+  type AnalyticsPayload,
+} from "@/app/(app)/dashboard/analytics/actions";
 import {
   formatCompletionRate,
   formatDurationSeconds,
@@ -31,6 +34,19 @@ const presets: { id: AnalyticsPreset; label: string }[] = [
   { id: "custom", label: "Custom" },
 ];
 
+function downloadCsvFile(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function AnalyticsDashboard({
   initialPreset,
   customStart,
@@ -41,6 +57,8 @@ export function AnalyticsDashboard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [customFrom, setCustomFrom] = useState(customStart ?? "");
   const [customTo, setCustomTo] = useState(customEnd ?? "");
 
@@ -51,6 +69,7 @@ export function AnalyticsDashboard({
     1,
     ...trend.map((point) => point.total_customers),
   );
+
   function navigate(preset: AnalyticsPreset, from?: string, to?: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("range", preset);
@@ -66,16 +85,53 @@ export function AnalyticsDashboard({
     });
   }
 
+  async function handleExportCsv() {
+    if (isExporting) {
+      return;
+    }
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      const result = await exportBusinessAnalyticsCsv({
+        preset: initialPreset,
+        customStart:
+          initialPreset === "custom" ? customFrom || customStart : null,
+        customEnd: initialPreset === "custom" ? customTo || customEnd : null,
+      });
+      if (result.error || !result.csv || !result.filename) {
+        setExportError(result.error ?? "Could not export analytics.");
+        return;
+      }
+      downloadCsvFile(result.csv, result.filename);
+    } catch {
+      setExportError("Could not export analytics. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          Analytics
-        </h1>
-        <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted">
-          Operational queue reporting for your business. Ranges use UTC day
-          boundaries.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+            Analytics
+          </h1>
+          <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted">
+            Operational queue reporting for your business. Ranges use UTC day
+            boundaries.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isPending || isExporting}
+          onClick={() => {
+            void handleExportCsv();
+          }}
+        >
+          {isExporting ? "Exporting…" : "Export CSV"}
+        </Button>
       </div>
 
       <section className="space-y-3">
@@ -87,7 +143,7 @@ export function AnalyticsDashboard({
               type="button"
               variant={initialPreset === preset.id ? "primary" : "secondary"}
               className="h-9 px-3 text-xs"
-              disabled={isPending}
+              disabled={isPending || isExporting}
               onClick={() => {
                 if (preset.id === "custom") {
                   navigate(
@@ -132,7 +188,7 @@ export function AnalyticsDashboard({
                 required
               />
             </div>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || isExporting}>
               Apply
             </Button>
           </form>
@@ -143,6 +199,15 @@ export function AnalyticsDashboard({
           </p>
         ) : null}
       </section>
+
+      {exportError ? (
+        <p
+          className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+          role="alert"
+        >
+          {exportError}
+        </p>
+      ) : null}
 
       {error ? (
         <p
