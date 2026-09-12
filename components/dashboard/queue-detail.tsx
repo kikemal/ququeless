@@ -31,6 +31,8 @@ type QueueDetailProps = {
   waitingCount: number;
   businessSlug: string;
   businessName: string;
+  businessIsOpen: boolean;
+  businessTimezone: string;
   publicQueueUrl: string | null;
 };
 
@@ -50,6 +52,8 @@ export function QueueDetail({
   waitingCount,
   businessSlug,
   businessName,
+  businessIsOpen,
+  businessTimezone,
   publicQueueUrl,
 }: QueueDetailProps) {
   const router = useRouter();
@@ -145,6 +149,12 @@ export function QueueDetail({
           ) : null}
         </InfoCard>
         <InfoCard label="Status">{queueStatusLabel(queue.status)}</InfoCard>
+        <InfoCard label="Business hours">
+          {businessIsOpen ? "Business open" : "Business closed"}
+          <span className="mt-1 block text-xs text-muted">
+            {businessTimezone}
+          </span>
+        </InfoCard>
         <InfoCard label="Created">{formatTimestamp(queue.created_at)}</InfoCard>
         <InfoCard label="Updated">{formatTimestamp(queue.updated_at)}</InfoCard>
       </dl>

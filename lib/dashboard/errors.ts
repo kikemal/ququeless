@@ -62,6 +62,20 @@ export function mapSettingsErrorMessage(message: string | undefined): string {
     return "Choose a valid branding theme.";
   }
 
+  if (value.includes("invalid timezone")) {
+    return "Choose a valid business timezone.";
+  }
+
+  if (
+    value.includes("schedule must") ||
+    value.includes("invalid weekday") ||
+    value.includes("invalid schedule time") ||
+    value.includes("open days require") ||
+    value.includes("start before end")
+  ) {
+    return "Check your weekly schedule times and try again.";
+  }
+
   if (
     value.includes("owner access required") ||
     value.includes("insufficient_privilege") ||
@@ -200,6 +214,10 @@ export function mapJoinQueueErrorMessage(message: string | undefined): string {
 
   if (value.includes("valid email")) {
     return "Enter a valid email address, or leave it blank.";
+  }
+
+  if (value.includes("business is closed")) {
+    return "This business is currently closed.";
   }
 
   if (value.includes("queue not found") || value.includes("no_data_found")) {

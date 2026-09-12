@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -10,6 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  BUSINESS_TIMEZONES,
+  WEEKDAY_LABELS,
+  type DayScheduleInput,
+  type Weekday,
+} from "@/lib/business/hours";
 import {
   BRANDING_THEMES,
   BUSINESS_NAME_MAX,
@@ -29,6 +35,8 @@ export type BusinessSettingsFormValues = {
   contactEmail: string;
   contactPhone: string;
   brandingTheme: BrandingTheme;
+  timezone: string;
+  schedule: DayScheduleInput[];
 };
 
 type BusinessSettingsFormProps = {
@@ -36,6 +44,61 @@ type BusinessSettingsFormProps = {
 };
 
 const initialState: SettingsActionState = {};
+
+function DayRow({
+  formId,
+  day,
+}: {
+  formId: string;
+  day: DayScheduleInput;
+}) {
+  const [closed, setClosed] = useState(day.isClosed);
+  const label =
+    WEEKDAY_LABELS.find((item) => item.weekday === day.weekday)?.label ??
+    `Day ${day.weekday}`;
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-border bg-surface px-3 py-3 sm:grid-cols-[7rem_auto_1fr_1fr] sm:items-center">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          name={`day_${day.weekday}_closed`}
+          value="true"
+          checked={closed}
+          onChange={(event) => setClosed(event.target.checked)}
+        />
+        Closed
+      </label>
+      <div className="space-y-1">
+        <Label htmlFor={`${formId}-open-${day.weekday}`} className="text-xs">
+          Start
+        </Label>
+        <Input
+          id={`${formId}-open-${day.weekday}`}
+          name={`day_${day.weekday}_open`}
+          type="time"
+          defaultValue={day.openTime}
+          disabled={closed}
+          required={!closed}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`${formId}-close-${day.weekday}`} className="text-xs">
+          End
+        </Label>
+        <Input
+          id={`${formId}-close-${day.weekday}`}
+          name={`day_${day.weekday}_close`}
+          type="time"
+          defaultValue={day.closeTime}
+          disabled={closed}
+          required={!closed}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
   const router = useRouter();
@@ -45,6 +108,10 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
     initialState,
   );
   const successRef = useRef(false);
+  const timezoneOptions =
+    BUSINESS_TIMEZONES.includes(initial.timezone as (typeof BUSINESS_TIMEZONES)[number])
+      ? BUSINESS_TIMEZONES
+      : ([initial.timezone, ...BUSINESS_TIMEZONES] as readonly string[]);
 
   useEffect(() => {
     if (state.success && !successRef.current) {
@@ -55,6 +122,10 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
       successRef.current = false;
     }
   }, [state.success, router]);
+
+  const schedule = [...initial.schedule].sort(
+    (a, b) => a.weekday - b.weekday,
+  ) as DayScheduleInput[];
 
   return (
     <form action={formAction} className="mx-auto max-w-2xl space-y-8">
@@ -128,6 +199,46 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
               "focus-visible:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30",
             )}
           />
+        </div>
+      </section>
+
+      <section className="space-y-4 border-t border-border pt-8">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Hours & timezone
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Customers can join only while the business is open in this timezone.
+            Queue open/paused/closed stays separate.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-timezone`}>Business timezone</Label>
+          <select
+            id={`${formId}-timezone`}
+            name="timezone"
+            defaultValue={initial.timezone}
+            className={cn(
+              "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground",
+              "focus-visible:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30",
+            )}
+          >
+            {timezoneOptions.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Weekly schedule</p>
+          <div className="space-y-2">
+            {schedule.map((day) => (
+              <DayRow key={day.weekday} formId={formId} day={day} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -229,3 +340,5 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
     </form>
   );
 }
+
+export type { Weekday };

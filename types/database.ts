@@ -188,6 +188,7 @@ export type Database = {
           public_description: string | null
           public_instructions: string | null
           slug: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -204,6 +205,7 @@ export type Database = {
           public_description?: string | null
           public_instructions?: string | null
           slug: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -220,9 +222,42 @@ export type Database = {
           public_description?: string | null
           public_instructions?: string | null
           slug?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      business_operating_hours: {
+        Row: {
+          business_id: string
+          close_time: string | null
+          is_closed: boolean
+          open_time: string | null
+          weekday: number
+        }
+        Insert: {
+          business_id: string
+          close_time?: string | null
+          is_closed?: boolean
+          open_time?: string | null
+          weekday: number
+        }
+        Update: {
+          business_id?: string
+          close_time?: string | null
+          is_closed?: boolean
+          open_time?: string | null
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_operating_hours_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -523,8 +558,10 @@ export type Database = {
         Returns: {
           average_service_minutes: number
           branding_theme: string
+          business_is_open: boolean
           business_name: string
           business_slug: string
+          business_timezone: string
           contact_email: string | null
           contact_phone: string | null
           current_number: number
@@ -536,8 +573,27 @@ export type Database = {
           queue_status: Database["public"]["Enums"]["queue_status"]
           service_description: string | null
           service_name: string
+          today_close_time: string | null
+          today_is_closed: boolean
+          today_open_time: string | null
           waiting_count: number
         }[]
+      }
+      is_business_open_at: {
+        Args: { p_at?: string; p_business_id: string }
+        Returns: boolean
+      }
+      is_business_open_now: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
+      is_valid_iana_timezone: {
+        Args: { p_tz: string }
+        Returns: boolean
+      }
+      update_my_business_operating_hours: {
+        Args: { p_schedule: Json; p_timezone: string }
+        Returns: undefined
       }
       update_my_business_settings: {
         Args: {
@@ -562,6 +618,7 @@ export type Database = {
           public_description: string | null
           public_instructions: string | null
           slug: string
+          timezone: string
           updated_at: string
         }
       }

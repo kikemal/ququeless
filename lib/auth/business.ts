@@ -16,6 +16,7 @@ export type PrimaryBusiness = Pick<
   | "contact_email"
   | "contact_phone"
   | "branding_theme"
+  | "timezone"
 >;
 
 /**
@@ -47,7 +48,7 @@ export async function getPrimaryBusiness(
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "id, name, slug, business_type, phone, email, public_description, public_instructions, contact_email, contact_phone, branding_theme",
+      "id, name, slug, business_type, phone, email, public_description, public_instructions, contact_email, contact_phone, branding_theme, timezone",
     )
     .eq("id", membership.business_id)
     .maybeSingle();

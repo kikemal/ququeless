@@ -4,6 +4,12 @@ import { notFound } from "next/navigation";
 import { JoinQueueForm } from "@/components/join/join-queue-form";
 import { PublicQueuesLiveRefresh } from "@/components/join/public-queues-live-refresh";
 import {
+  msUntilNextScheduleBoundary,
+  publicAvailabilityCopy,
+  publicJoinBlockedReason,
+  type PublicAvailability,
+} from "@/lib/business/hours";
+import {
   mapPublicBusinessProfile,
   publicQueueThemeClass,
   type BrandingTheme,
@@ -28,6 +34,11 @@ type PublicQueue = {
   contact_email: string | null;
   contact_phone: string | null;
   branding_theme: string | null;
+  business_timezone: string;
+  business_is_open: boolean;
+  today_is_closed: boolean;
+  today_open_time: string | null;
+  today_close_time: string | null;
   queue_id: string;
   queue_name: string;
   queue_status: QueueStatus;
@@ -39,7 +50,14 @@ type PublicQueue = {
   average_service_minutes: number;
 };
 
-function statusMessage(status: QueueStatus, isFull: boolean): string {
+function statusMessage(
+  businessIsOpen: boolean,
+  status: QueueStatus,
+  isFull: boolean,
+): string {
+  if (!businessIsOpen) {
+    return "This business is closed. Joining is unavailable until opening hours.";
+  }
   if (status === "open" && isFull) {
     return "Queue full. Please try again later.";
   }
@@ -92,9 +110,22 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
   const hasContact = Boolean(profile.contactEmail || profile.contactPhone);
   const queueIds = queues.map((queue) => queue.queue_id);
 
+  const availability: PublicAvailability = {
+    businessIsOpen: Boolean(queues[0].business_is_open),
+    todayIsClosed: Boolean(queues[0].today_is_closed),
+    todayOpenTime: queues[0].today_open_time,
+    todayCloseTime: queues[0].today_close_time,
+    timezone: queues[0].business_timezone || "UTC",
+  };
+  const availabilityCopy = publicAvailabilityCopy(availability);
+  const refreshInMs = msUntilNextScheduleBoundary(availability);
+
   return (
     <>
-      <PublicQueuesLiveRefresh queueIds={queueIds} />
+      <PublicQueuesLiveRefresh
+        queueIds={queueIds}
+        scheduleRefreshInMs={refreshInMs}
+      />
       <main
         className={cn(
           "mx-auto w-full max-w-3xl px-5 py-10 sm:px-6 lg:px-8",
@@ -125,6 +156,20 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
               {profile.publicDescription}
             </p>
           ) : null}
+          <div className="mt-4 space-y-1">
+            <p
+              className={cn(
+                "text-sm font-medium",
+                availability.businessIsOpen ? "text-accent" : "text-foreground",
+              )}
+              role="status"
+            >
+              {availabilityCopy.statusLabel}
+            </p>
+            {availabilityCopy.detail ? (
+              <p className="text-sm text-muted">{availabilityCopy.detail}</p>
+            ) : null}
+          </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             No account needed. After you join, keep your ticket page open to
             follow your place in line.
@@ -138,7 +183,13 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
               waitingCount,
               queue.max_waiting_customers,
             );
-            const canJoin = queue.queue_status === "open" && !isFull;
+            const businessIsOpen = Boolean(queue.business_is_open);
+            const blocked = publicJoinBlockedReason({
+              businessIsOpen,
+              queueStatus: queue.queue_status,
+              isFull,
+            });
+            const canJoin = blocked === null;
 
             return (
               <section
@@ -166,32 +217,48 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
                         queue.max_waiting_customers,
                       )}
                     </p>
-                    {isFull && queue.queue_status === "open" ? (
+                    {isFull && queue.queue_status === "open" && businessIsOpen ? (
                       <p className="mt-2 text-sm text-danger" role="status">
                         Queue full. {waitingCount} people are currently waiting.
                         Please try again later.
                       </p>
                     ) : null}
                   </div>
-                  <span
-                    className={cn(
-                      "inline-flex w-fit rounded-md px-2.5 py-1 text-xs font-medium",
-                      queue.queue_status === "open" &&
-                        !isFull &&
-                        "bg-accent-soft text-accent",
-                      queue.queue_status === "open" &&
-                        isFull &&
-                        "bg-danger/10 text-danger",
-                      queue.queue_status === "paused" &&
-                        "bg-background text-foreground",
-                      queue.queue_status === "closed" &&
-                        "bg-background text-muted",
-                    )}
-                  >
-                    {queue.queue_status === "open" && isFull
-                      ? "Full"
-                      : queueStatusLabel(queue.queue_status)}
-                  </span>
+                  <div className="flex flex-col items-start gap-2 sm:items-end">
+                    <span
+                      className={cn(
+                        "inline-flex w-fit rounded-md px-2.5 py-1 text-xs font-medium",
+                        businessIsOpen
+                          ? "bg-accent-soft text-accent"
+                          : "bg-background text-muted",
+                      )}
+                    >
+                      {businessIsOpen ? "Open" : "Closed"}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex w-fit rounded-md px-2.5 py-1 text-xs font-medium",
+                        queue.queue_status === "open" &&
+                          !isFull &&
+                          businessIsOpen &&
+                          "bg-accent-soft text-accent",
+                        queue.queue_status === "open" &&
+                          isFull &&
+                          "bg-danger/10 text-danger",
+                        queue.queue_status === "paused" &&
+                          "bg-background text-foreground",
+                        queue.queue_status === "closed" &&
+                          "bg-background text-muted",
+                        !businessIsOpen && "bg-background text-muted",
+                      )}
+                    >
+                      {!businessIsOpen
+                        ? "Business closed"
+                        : queue.queue_status === "open" && isFull
+                          ? "Full"
+                          : queueStatusLabel(queue.queue_status)}
+                    </span>
+                  </div>
                 </div>
 
                 <p
@@ -201,7 +268,13 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
                   )}
                   role="status"
                 >
-                  {statusMessage(queue.queue_status, isFull)}
+                  {blocked === "Business closed"
+                    ? "Business closed"
+                    : blocked === "Queue paused"
+                      ? "Queue paused"
+                      : blocked === "Queue closed"
+                        ? "Queue closed"
+                        : statusMessage(businessIsOpen, queue.queue_status, isFull)}
                 </p>
 
                 <div className="mt-5 border-t border-border pt-5">
@@ -209,6 +282,7 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
                     queueId={queue.queue_id}
                     queueStatus={queue.queue_status}
                     isFull={isFull}
+                    businessIsOpen={businessIsOpen}
                   />
                 </div>
               </section>

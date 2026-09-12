@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { getPrimaryMembership } from "@/lib/auth/business";
 import {
+  validateTimezone,
+  validateWeeklySchedule,
+  type DayScheduleInput,
+  type Weekday,
+} from "@/lib/business/hours";
+import {
   validateBusinessSettings,
   type NormalizedBusinessSettings,
 } from "@/lib/business/settings";
@@ -19,6 +25,21 @@ export type SettingsActionState = {
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function readDaySchedule(formData: FormData): DayScheduleInput[] {
+  const days: DayScheduleInput[] = [];
+  for (let weekday = 1; weekday <= 7; weekday += 1) {
+    const closedRaw = readString(formData, `day_${weekday}_closed`);
+    const isClosed = closedRaw === "true" || closedRaw === "on" || closedRaw === "1";
+    days.push({
+      weekday: weekday as Weekday,
+      isClosed,
+      openTime: readString(formData, `day_${weekday}_open`),
+      closeTime: readString(formData, `day_${weekday}_close`),
+    });
+  }
+  return days;
 }
 
 export async function updateBusinessSettingsAction(
@@ -55,6 +76,16 @@ export async function updateBusinessSettingsAction(
     return { error: validated.error.message };
   }
 
+  const tzResult = validateTimezone(readString(formData, "timezone"));
+  if (!tzResult.ok) {
+    return { error: tzResult.error.message };
+  }
+
+  const scheduleResult = validateWeeklySchedule(readDaySchedule(formData));
+  if (!scheduleResult.ok) {
+    return { error: scheduleResult.error.message };
+  }
+
   const value: NormalizedBusinessSettings = validated.value;
 
   const { error } = await supabase.rpc("update_my_business_settings", {
@@ -69,6 +100,19 @@ export async function updateBusinessSettingsAction(
   if (error) {
     console.error("update_my_business_settings error", error.code);
     return { error: mapSettingsErrorMessage(error.message) };
+  }
+
+  const { error: hoursError } = await supabase.rpc(
+    "update_my_business_operating_hours",
+    {
+      p_timezone: tzResult.value,
+      p_schedule: scheduleResult.value,
+    },
+  );
+
+  if (hoursError) {
+    console.error("update_my_business_operating_hours error", hoursError.code);
+    return { error: mapSettingsErrorMessage(hoursError.message) };
   }
 
   revalidatePath("/dashboard/settings");

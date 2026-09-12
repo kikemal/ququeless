@@ -97,6 +97,15 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
     (entry) => entry.status === "waiting",
   ).length;
 
+  const { data: isOpenData, error: isOpenError } = await supabase.rpc(
+    "is_business_open_now",
+    { p_business_id: business.id },
+  );
+
+  if (isOpenError) {
+    console.error("QueueDetailPage is_open error", isOpenError.code);
+  }
+
   return (
     <main className="space-y-6">
       <QueueDetail
@@ -104,6 +113,8 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
         waitingCount={waitingCount}
         businessSlug={business.slug}
         businessName={business.name}
+        businessIsOpen={Boolean(isOpenData)}
+        businessTimezone={business.timezone || "UTC"}
         publicQueueUrl={buildPublicQueueUrl(business.slug)}
       />
       <QueueEntriesManager

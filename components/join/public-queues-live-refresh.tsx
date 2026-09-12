@@ -11,6 +11,8 @@ import {
 
 type PublicQueuesLiveRefreshProps = {
   queueIds: string[];
+  /** Soft UI refresh at the next open/close boundary; does not authorize joins. */
+  scheduleRefreshInMs?: number;
 };
 
 /**
@@ -19,6 +21,7 @@ type PublicQueuesLiveRefreshProps = {
  */
 export function PublicQueuesLiveRefresh({
   queueIds,
+  scheduleRefreshInMs,
 }: PublicQueuesLiveRefreshProps) {
   const router = useRouter();
   const queueIdsKey = queueIds.join(",");
@@ -81,6 +84,24 @@ export function PublicQueuesLiveRefresh({
       }
     };
   }, [enabled, queueIdsKey, onSignal]);
+
+  useEffect(() => {
+    if (
+      scheduleRefreshInMs === undefined ||
+      !Number.isFinite(scheduleRefreshInMs) ||
+      scheduleRefreshInMs <= 0
+    ) {
+      return;
+    }
+    // Cap at 6 hours so a bad clock math cannot create a forever timer.
+    const delay = Math.min(scheduleRefreshInMs + 250, 6 * 60 * 60 * 1000);
+    const timer = window.setTimeout(() => {
+      onSignal();
+    }, delay);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [scheduleRefreshInMs, onSignal]);
 
   return null;
 }

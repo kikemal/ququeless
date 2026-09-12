@@ -12,6 +12,7 @@ type JoinQueueFormProps = {
   queueId: string;
   queueStatus: "open" | "paused" | "closed";
   isFull?: boolean;
+  businessIsOpen?: boolean;
 };
 
 const initialState: JoinQueueState = {};
@@ -20,6 +21,7 @@ export function JoinQueueForm({
   queueId,
   queueStatus,
   isFull = false,
+  businessIsOpen = true,
 }: JoinQueueFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
@@ -41,7 +43,8 @@ export function JoinQueueForm({
     initialState,
   );
 
-  const disabled = pending || queueStatus !== "open" || isFull;
+  const disabled =
+    pending || !businessIsOpen || queueStatus !== "open" || isFull;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -96,11 +99,13 @@ export function JoinQueueForm({
       <Button type="submit" className="w-full" disabled={disabled}>
         {pending
           ? "Joining…"
-          : isFull && queueStatus === "open"
-            ? "Queue full"
-            : queueStatus === "open"
-              ? "Join queue"
-              : "Not accepting joins"}
+          : !businessIsOpen
+            ? "Business closed"
+            : isFull && queueStatus === "open"
+              ? "Queue full"
+              : queueStatus === "open"
+                ? "Join queue"
+                : "Not accepting joins"}
       </Button>
     </form>
   );
