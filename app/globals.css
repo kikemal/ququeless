@@ -79,6 +79,32 @@
       linear-gradient(180deg, #eef4f5 0%, var(--background) 42%);
   }
 
+  /* Phase 9: controlled public queue themes (whitelist only) */
+  .pq-theme-default {
+    /* inherits root tokens */
+  }
+
+  .pq-theme-minimal {
+    --accent: #3d4f5a;
+    --accent-hover: #2c3a43;
+    --accent-soft: #e8eef1;
+    --focus: #3d4f5a;
+  }
+
+  .pq-theme-warm {
+    --accent: #b45309;
+    --accent-hover: #92400e;
+    --accent-soft: #ffedd5;
+    --focus: #b45309;
+  }
+
+  .pq-theme-professional {
+    --accent: #1e3a5f;
+    --accent-hover: #152a45;
+    --accent-soft: #e8eef6;
+    --focus: #1e3a5f;
+  }
+
   .animate-fade-up {
     animation: fade-up 0.7s ease-out both;
   }

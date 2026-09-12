@@ -1,3 +1,58 @@
+export function mapSettingsErrorMessage(message: string | undefined): string {
+  const value = (message ?? "").toLowerCase();
+
+  if (value.includes("business name is required") || value.includes("name_not_blank")) {
+    return "Business name is required.";
+  }
+
+  if (value.includes("business name is too long") || value.includes("name_max_length")) {
+    return "Business name is too long.";
+  }
+
+  if (value.includes("public description is too long")) {
+    return "Public description is too long.";
+  }
+
+  if (value.includes("public instructions are too long")) {
+    return "Customer instructions are too long.";
+  }
+
+  if (value.includes("valid email")) {
+    return "Enter a valid public email, or leave it blank.";
+  }
+
+  if (value.includes("contact phone is too long")) {
+    return "Public phone is too long.";
+  }
+
+  if (value.includes("invalid branding theme") || value.includes("branding_theme")) {
+    return "Choose a valid branding theme.";
+  }
+
+  if (
+    value.includes("owner access required") ||
+    value.includes("insufficient_privilege") ||
+    value.includes("permission denied") ||
+    value.includes("42501")
+  ) {
+    return "You do not have permission to change business settings.";
+  }
+
+  if (value.includes("business membership required")) {
+    return "Create a business before updating settings.";
+  }
+
+  if (value.includes("jwt") || value.includes("authentication")) {
+    return "Your session expired. Please log in again.";
+  }
+
+  if (value.includes("network") || value.includes("fetch")) {
+    return "Network error. Check your connection and try again.";
+  }
+
+  return "Could not save settings. Please try again.";
+}
+
 export function mapServiceErrorMessage(message: string | undefined): string {
   const value = (message ?? "").toLowerCase();
 

@@ -175,35 +175,50 @@ export type Database = {
       }
       businesses: {
         Row: {
+          branding_theme: string
           business_type: string
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           email: string | null
           id: string
           logo_url: string | null
           name: string
           phone: string | null
+          public_description: string | null
+          public_instructions: string | null
           slug: string
           updated_at: string
         }
         Insert: {
+          branding_theme?: string
           business_type: string
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           email?: string | null
           id?: string
           logo_url?: string | null
           name: string
           phone?: string | null
+          public_description?: string | null
+          public_instructions?: string | null
           slug: string
           updated_at?: string
         }
         Update: {
+          branding_theme?: string
           business_type?: string
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           email?: string | null
           id?: string
           logo_url?: string | null
           name?: string
           phone?: string | null
+          public_description?: string | null
+          public_instructions?: string | null
           slug?: string
           updated_at?: string
         }
@@ -504,15 +519,46 @@ export type Database = {
         Args: { p_slug: string }
         Returns: {
           average_service_minutes: number
+          branding_theme: string
           business_name: string
           business_slug: string
+          contact_email: string | null
+          contact_phone: string | null
           current_number: number
+          public_description: string | null
+          public_instructions: string | null
           queue_id: string
           queue_name: string
           queue_status: Database["public"]["Enums"]["queue_status"]
           service_description: string | null
           service_name: string
         }[]
+      }
+      update_my_business_settings: {
+        Args: {
+          p_branding_theme?: string
+          p_contact_email?: string | null
+          p_contact_phone?: string | null
+          p_name: string
+          p_public_description?: string | null
+          p_public_instructions?: string | null
+        }
+        Returns: {
+          branding_theme: string
+          business_type: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          public_description: string | null
+          public_instructions: string | null
+          slug: string
+          updated_at: string
+        }
       }
       get_my_business_analytics: {
         Args: { p_end: string; p_start: string }

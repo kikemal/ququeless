@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JoinQueueForm } from "@/components/join/join-queue-form";
+import {
+  mapPublicBusinessProfile,
+  publicQueueThemeClass,
+  type BrandingTheme,
+} from "@/lib/business/settings";
 import { queueStatusLabel, type QueueStatus } from "@/lib/dashboard/queue-status";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -13,6 +18,11 @@ type JoinPageProps = { params: Promise<{ slug: string }> };
 type PublicQueue = {
   business_name: string;
   business_slug: string;
+  public_description: string | null;
+  public_instructions: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  branding_theme: string | null;
   queue_id: string;
   queue_name: string;
   queue_status: QueueStatus;
@@ -37,6 +47,20 @@ function statusMessage(status: QueueStatus): string {
   }
 }
 
+function queueCardClass(theme: BrandingTheme): string {
+  switch (theme) {
+    case "minimal":
+      return "rounded-xl border border-border/70 bg-surface/80 p-5";
+    case "warm":
+      return "rounded-2xl border border-border bg-surface p-5 shadow-sm";
+    case "professional":
+      return "rounded-lg border border-border bg-surface p-5";
+    case "default":
+    default:
+      return "rounded-2xl border border-border bg-surface p-5 shadow-sm";
+  }
+}
+
 export default async function JoinQueuePage({ params }: JoinPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -53,16 +77,41 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
     notFound();
   }
 
-  const businessName = queues[0].business_name;
+  const profile = mapPublicBusinessProfile(queues[0]);
+  const themeClass = publicQueueThemeClass(profile.brandingTheme);
+  const hasContact = Boolean(profile.contactEmail || profile.contactPhone);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <p className="text-sm font-medium text-accent">{businessName}</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground">
-          Join a queue
+    <main
+      className={cn(
+        "mx-auto w-full max-w-3xl px-5 py-10 sm:px-6 lg:px-8",
+        themeClass,
+      )}
+    >
+      <div
+        className={cn(
+          "mb-8",
+          profile.brandingTheme === "professional" && "border-b border-border pb-6",
+          profile.brandingTheme === "minimal" && "mb-6",
+        )}
+      >
+        <h1
+          className={cn(
+            "font-display font-semibold tracking-tight text-foreground",
+            profile.brandingTheme === "professional"
+              ? "text-2xl sm:text-3xl"
+              : "text-3xl",
+            profile.brandingTheme === "warm" && "text-accent",
+          )}
+        >
+          {profile.businessName}
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        {profile.publicDescription ? (
+          <p className="mt-3 text-base leading-relaxed text-muted">
+            {profile.publicDescription}
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm leading-relaxed text-muted">
           No account needed. After you join, keep your ticket page open to follow
           your place in line.
         </p>
@@ -75,7 +124,7 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
           return (
             <section
               key={queue.queue_id}
-              className="rounded-2xl border border-border bg-surface p-5 shadow-sm"
+              className={queueCardClass(profile.brandingTheme)}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -128,6 +177,37 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
           );
         })}
       </div>
+
+      {profile.publicInstructions ? (
+        <section className="mt-8 rounded-xl border border-border bg-surface/60 px-5 py-4">
+          <h2 className="text-sm font-medium text-foreground">
+            Before you join
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted">
+            {profile.publicInstructions}
+          </p>
+        </section>
+      ) : null}
+
+      {hasContact ? (
+        <section className="mt-6 text-sm text-muted">
+          <h2 className="font-medium text-foreground">Contact</h2>
+          <ul className="mt-2 space-y-1">
+            {profile.contactEmail ? (
+              <li>
+                <span className="text-muted">Email: </span>
+                <span className="text-foreground">{profile.contactEmail}</span>
+              </li>
+            ) : null}
+            {profile.contactPhone ? (
+              <li>
+                <span className="text-muted">Phone: </span>
+                <span className="text-foreground">{profile.contactPhone}</span>
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }

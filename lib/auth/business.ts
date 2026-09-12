@@ -5,7 +5,17 @@ import type { Tables } from "@/types/database";
 
 export type PrimaryBusiness = Pick<
   Tables<"businesses">,
-  "id" | "name" | "slug" | "business_type" | "phone" | "email"
+  | "id"
+  | "name"
+  | "slug"
+  | "business_type"
+  | "phone"
+  | "email"
+  | "public_description"
+  | "public_instructions"
+  | "contact_email"
+  | "contact_phone"
+  | "branding_theme"
 >;
 
 /**
@@ -36,7 +46,9 @@ export async function getPrimaryBusiness(
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("id, name, slug, business_type, phone, email")
+    .select(
+      "id, name, slug, business_type, phone, email, public_description, public_instructions, contact_email, contact_phone, branding_theme",
+    )
     .eq("id", membership.business_id)
     .maybeSingle();
 
