@@ -115,7 +115,7 @@ export async function createQueueAction(
     .maybeSingle();
 
   if (error) {
-    console.error("createQueueAction error", error.message);
+    console.error("createQueueAction error", error.code);
     return { error: mapQueueErrorMessage(error.message) };
   }
 
@@ -206,7 +206,7 @@ export async function updateQueueAction(
     .maybeSingle();
 
   if (error) {
-    console.error("updateQueueAction error", error.message);
+    console.error("updateQueueAction error", error.code);
     return { error: mapQueueErrorMessage(error.message) };
   }
 
@@ -246,7 +246,7 @@ export async function setQueueStatusAction(
     .maybeSingle();
 
   if (error) {
-    console.error("setQueueStatusAction error", error.message);
+    console.error("setQueueStatusAction error", error.code);
     return { error: mapQueueErrorMessage(error.message) };
   }
 
@@ -283,7 +283,7 @@ export async function deleteQueueAction(
     .maybeSingle();
 
   if (error) {
-    console.error("deleteQueueAction error", error.message);
+    console.error("deleteQueueAction error", error.code);
     return { error: mapQueueErrorMessage(error.message) };
   }
 

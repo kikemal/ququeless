@@ -8,4 +8,6 @@
 
 Never import `admin.ts` from Client Components. Never prefix the service role key with `NEXT_PUBLIC_`.
 
+Browser-safe env vars are only `NEXT_PUBLIC_*` (URL, anon key, app/site URL). Email provider keys (`RESEND_API_KEY`) and the service role key are server-only.
+
 Database types live in `types/database.ts` (generated).

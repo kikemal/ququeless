@@ -54,7 +54,7 @@ async function requireMemberQueue(queueId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error("requireMemberQueue error", error.message);
+    console.error("requireMemberQueue error", error.code);
     return {
       error: mapQueueEntryErrorMessage(error.message),
       supabase,
@@ -141,7 +141,7 @@ export async function transitionEntryAction(
     .maybeSingle();
 
   if (lookupError) {
-    console.error("transitionEntryAction lookup", lookupError.message);
+    console.error("transitionEntryAction lookup", lookupError.code);
     return { error: mapQueueEntryErrorMessage(lookupError.message) };
   }
 

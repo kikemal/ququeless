@@ -146,7 +146,7 @@ export async function inviteStaffAction(
   });
 
   if (error) {
-    console.error("inviteStaffAction error", error.message);
+    console.error("inviteStaffAction error", error.code);
     return { error: mapTeamError(error.message) };
   }
 
@@ -195,7 +195,7 @@ export async function revokeInvitationAction(
   });
 
   if (error) {
-    console.error("revokeInvitationAction error", error.message);
+    console.error("revokeInvitationAction error", error.code);
     return { error: mapTeamError(error.message) };
   }
 
@@ -221,7 +221,7 @@ export async function removeStaffAction(
   });
 
   if (error) {
-    console.error("removeStaffAction error", error.message);
+    console.error("removeStaffAction error", error.code);
     return { error: mapTeamError(error.message) };
   }
 
@@ -252,7 +252,7 @@ export async function acceptInvitationAction(
   });
 
   if (error) {
-    console.error("acceptInvitationAction error", error.message);
+    console.error("acceptInvitationAction error", error.code);
     return { error: mapAcceptError(error.message) };
   }
 

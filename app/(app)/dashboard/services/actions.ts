@@ -86,7 +86,7 @@ export async function createServiceAction(
   });
 
   if (error) {
-    console.error("createServiceAction error", error.message);
+    console.error("createServiceAction error", error.code);
     return { error: mapServiceErrorMessage(error.message) };
   }
 
@@ -134,7 +134,7 @@ export async function updateServiceAction(
     .maybeSingle();
 
   if (error) {
-    console.error("updateServiceAction error", error.message);
+    console.error("updateServiceAction error", error.code);
     return { error: mapServiceErrorMessage(error.message) };
   }
 
@@ -170,7 +170,7 @@ export async function setServiceActiveAction(
     .maybeSingle();
 
   if (error) {
-    console.error("setServiceActiveAction error", error.message);
+    console.error("setServiceActiveAction error", error.code);
     return { error: mapServiceErrorMessage(error.message) };
   }
 
@@ -229,7 +229,7 @@ export async function deleteServiceAction(
     .maybeSingle();
 
   if (error) {
-    console.error("deleteServiceAction error", error.message);
+    console.error("deleteServiceAction error", error.code);
     return { error: mapServiceErrorMessage(error.message) };
   }
 

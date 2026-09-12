@@ -73,7 +73,7 @@ export async function signupAction(
   });
 
   if (error) {
-    console.error("signupAction error", error.message);
+    console.error("signupAction error", error.code);
     return { error: mapAuthErrorMessage(error.message) };
   }
 
@@ -111,7 +111,7 @@ export async function loginAction(
   });
 
   if (error || !data.user) {
-    console.error("loginAction error", error?.message);
+    console.error("loginAction error", error?.code ?? "unknown");
     return { error: mapAuthErrorMessage(error?.message) };
   }
 
@@ -193,7 +193,7 @@ export async function createBusinessAction(
       error.code === "23505";
 
     if (!isSlugConflict) {
-      console.error("createBusinessAction error", error.message);
+      console.error("createBusinessAction error", error.code);
       return { error: mapBusinessErrorMessage(error.message) };
     }
   }
