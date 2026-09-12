@@ -323,6 +323,7 @@ export type Database = {
           created_at: string
           current_number: number
           id: string
+          max_waiting_customers: number | null
           name: string
           service_id: string
           status: Database["public"]["Enums"]["queue_status"]
@@ -333,6 +334,7 @@ export type Database = {
           created_at?: string
           current_number?: number
           id?: string
+          max_waiting_customers?: number | null
           name: string
           service_id: string
           status?: Database["public"]["Enums"]["queue_status"]
@@ -343,6 +345,7 @@ export type Database = {
           created_at?: string
           current_number?: number
           id?: string
+          max_waiting_customers?: number | null
           name?: string
           service_id?: string
           status?: Database["public"]["Enums"]["queue_status"]
@@ -525,6 +528,7 @@ export type Database = {
           contact_email: string | null
           contact_phone: string | null
           current_number: number
+          max_waiting_customers: number | null
           public_description: string | null
           public_instructions: string | null
           queue_id: string
@@ -532,6 +536,7 @@ export type Database = {
           queue_status: Database["public"]["Enums"]["queue_status"]
           service_description: string | null
           service_name: string
+          waiting_count: number
         }[]
       }
       update_my_business_settings: {

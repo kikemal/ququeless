@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getPrimaryBusiness } from "@/lib/auth/business";
+import { parseMaxWaitingCustomersInput } from "@/lib/dashboard/queue-capacity";
 import { mapQueueErrorMessage } from "@/lib/dashboard/errors";
 import { isQueueStatus } from "@/lib/dashboard/queue-status";
 import { createClient } from "@/lib/supabase/server";
@@ -62,6 +63,9 @@ export async function createQueueAction(
   const name = readString(formData, "name");
   const serviceId = readString(formData, "serviceId");
   const statusRaw = readString(formData, "status") || "open";
+  const capacityParsed = parseMaxWaitingCustomersInput(
+    readString(formData, "maxWaitingCustomers"),
+  );
 
   if (!name) {
     return { error: "Queue name is required." };
@@ -73,6 +77,10 @@ export async function createQueueAction(
 
   if (!isQueueStatus(statusRaw)) {
     return { error: "Choose a valid queue status." };
+  }
+
+  if (!capacityParsed.ok) {
+    return { error: capacityParsed.error };
   }
 
   const ctx = await requireOwnerContext();
@@ -88,7 +96,7 @@ export async function createQueueAction(
     .maybeSingle();
 
   if (serviceError) {
-    console.error("createQueueAction service lookup", serviceError.message);
+    console.error("createQueueAction service lookup", serviceError.code);
     return { error: mapQueueErrorMessage(serviceError.message) };
   }
 
@@ -110,6 +118,7 @@ export async function createQueueAction(
       service_id: service.id,
       name,
       status: statusRaw,
+      max_waiting_customers: capacityParsed.value,
     })
     .select("id")
     .maybeSingle();
@@ -131,6 +140,9 @@ export async function updateQueueAction(
   const name = readString(formData, "name");
   const serviceId = readString(formData, "serviceId");
   const statusRaw = readString(formData, "status");
+  const capacityParsed = parseMaxWaitingCustomersInput(
+    readString(formData, "maxWaitingCustomers"),
+  );
 
   if (!queueId) {
     return { error: "Queue not found." };
@@ -148,6 +160,10 @@ export async function updateQueueAction(
     return { error: "Choose a valid queue status." };
   }
 
+  if (!capacityParsed.ok) {
+    return { error: capacityParsed.error };
+  }
+
   const ctx = await requireOwnerContext();
   if (ctx.error || !ctx.business) {
     return { error: ctx.error ?? "Could not load your business." };
@@ -161,7 +177,7 @@ export async function updateQueueAction(
     .maybeSingle();
 
   if (serviceError) {
-    console.error("updateQueueAction service lookup", serviceError.message);
+    console.error("updateQueueAction service lookup", serviceError.code);
     return { error: mapQueueErrorMessage(serviceError.message) };
   }
 
@@ -177,7 +193,7 @@ export async function updateQueueAction(
     .maybeSingle();
 
   if (existingError) {
-    console.error("updateQueueAction queue lookup", existingError.message);
+    console.error("updateQueueAction queue lookup", existingError.code);
     return { error: mapQueueErrorMessage(existingError.message) };
   }
 
@@ -199,6 +215,7 @@ export async function updateQueueAction(
       name,
       service_id: service.id,
       status: statusRaw,
+      max_waiting_customers: capacityParsed.value,
     })
     .eq("id", queueId)
     .eq("business_id", ctx.business.id)

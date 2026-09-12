@@ -31,7 +31,7 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
   const { data, error } = await supabase
     .from("queues")
     .select(
-      "id, business_id, service_id, name, status, current_number, created_at, updated_at, services(id, name, average_service_minutes, is_active, description)",
+      "id, business_id, service_id, name, status, current_number, max_waiting_customers, created_at, updated_at, services(id, name, average_service_minutes, is_active, description)",
     )
     .eq("id", id)
     .eq("business_id", business.id)
@@ -93,10 +93,15 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
     };
   });
 
+  const waitingCount = enrichedEntries.filter(
+    (entry) => entry.status === "waiting",
+  ).length;
+
   return (
     <main className="space-y-6">
       <QueueDetail
         queue={data as QueueDetailData}
+        waitingCount={waitingCount}
         businessSlug={business.slug}
         businessName={business.name}
         publicQueueUrl={buildPublicQueueUrl(business.slug)}

@@ -136,6 +136,13 @@ export function mapQueueErrorMessage(message: string | undefined): string {
   }
 
   if (
+    value.includes("queues_max_waiting_customers_positive") ||
+    value.includes("max_waiting_customers")
+  ) {
+    return "Capacity must be blank (unlimited) or a positive whole number.";
+  }
+
+  if (
     value.includes("must match service") ||
     value.includes("queue business_id must match")
   ) {
@@ -201,6 +208,10 @@ export function mapJoinQueueErrorMessage(message: string | undefined): string {
 
   if (value.includes("not open") || value.includes("paused") || value.includes("closed")) {
     return "This queue is not accepting customers right now.";
+  }
+
+  if (value.includes("queue is full")) {
+    return "This queue is currently full. Please try again later.";
   }
 
   if (value.includes("service is inactive")) {

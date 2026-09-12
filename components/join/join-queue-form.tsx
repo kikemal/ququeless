@@ -11,11 +11,16 @@ import { Label } from "@/components/ui/label";
 type JoinQueueFormProps = {
   queueId: string;
   queueStatus: "open" | "paused" | "closed";
+  isFull?: boolean;
 };
 
 const initialState: JoinQueueState = {};
 
-export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
+export function JoinQueueForm({
+  queueId,
+  queueStatus,
+  isFull = false,
+}: JoinQueueFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
     async (prev: JoinQueueState, formData: FormData) => {
@@ -36,7 +41,7 @@ export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
     initialState,
   );
 
-  const disabled = pending || queueStatus !== "open";
+  const disabled = pending || queueStatus !== "open" || isFull;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -89,7 +94,13 @@ export function JoinQueueForm({ queueId, queueStatus }: JoinQueueFormProps) {
         </p>
       ) : null}
       <Button type="submit" className="w-full" disabled={disabled}>
-        {pending ? "Joining…" : queueStatus === "open" ? "Join queue" : "Not accepting joins"}
+        {pending
+          ? "Joining…"
+          : isFull && queueStatus === "open"
+            ? "Queue full"
+            : queueStatus === "open"
+              ? "Join queue"
+              : "Not accepting joins"}
       </Button>
     </form>
   );

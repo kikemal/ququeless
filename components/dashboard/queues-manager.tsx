@@ -136,6 +136,7 @@ export function QueuesManager({ queues, services }: QueuesManagerProps) {
                 <th className="px-4 py-3 font-medium">Service</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Current #</th>
+                <th className="px-4 py-3 font-medium">Capacity</th>
                 <th className="px-4 py-3 font-medium">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -167,6 +168,11 @@ export function QueuesManager({ queues, services }: QueuesManagerProps) {
                     </td>
                     <td className="px-4 py-4 align-top text-foreground">
                       {queue.current_number}
+                    </td>
+                    <td className="px-4 py-4 align-top text-foreground">
+                      {queue.max_waiting_customers == null
+                        ? "Unlimited"
+                        : queue.max_waiting_customers}
                     </td>
                     <td className="px-4 py-4 align-top">
                       <div className="flex flex-wrap justify-end gap-2">
@@ -410,6 +416,33 @@ function QueueFormDialog({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <Label htmlFor="queue-capacity">
+              Max waiting customers{" "}
+              <span className="font-normal text-muted">(optional)</span>
+            </Label>
+            <Input
+              id="queue-capacity"
+              name="maxWaitingCustomers"
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              inputMode="numeric"
+              disabled={pending}
+              defaultValue={
+                queue?.max_waiting_customers != null
+                  ? String(queue.max_waiting_customers)
+                  : ""
+              }
+              placeholder="Leave blank for unlimited"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Limits how many customers can wait at once. Leave blank for
+              unlimited.
+            </p>
           </div>
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">

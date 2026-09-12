@@ -9,6 +9,10 @@ import { PublicQueueQr } from "@/components/dashboard/public-queue-qr";
 import { StatusBadge } from "@/components/dashboard/queues-manager";
 import { Button } from "@/components/ui/button";
 import {
+  formatWaitingCapacityLabel,
+  isQueueAtCapacity,
+} from "@/lib/dashboard/queue-capacity";
+import {
   QUEUE_STATUSES,
   queueStatusLabel,
   type QueueStatus,
@@ -24,6 +28,7 @@ export type QueueDetailData = Tables<"queues"> & {
 
 type QueueDetailProps = {
   queue: QueueDetailData;
+  waitingCount: number;
   businessSlug: string;
   businessName: string;
   publicQueueUrl: string | null;
@@ -42,6 +47,7 @@ function formatTimestamp(value: string) {
 
 export function QueueDetail({
   queue,
+  waitingCount,
   businessSlug,
   businessName,
   publicQueueUrl,
@@ -50,6 +56,10 @@ export function QueueDetail({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const atCapacity = isQueueAtCapacity(
+    waitingCount,
+    queue.max_waiting_customers,
+  );
 
   function changeStatus(status: QueueStatus) {
     if (status === queue.status) {
@@ -124,6 +134,16 @@ export function QueueDetail({
             : "—"}
         </InfoCard>
         <InfoCard label="Current number">{queue.current_number}</InfoCard>
+        <InfoCard label="Waiting capacity">
+          {formatWaitingCapacityLabel(waitingCount, queue.max_waiting_customers)}
+          {queue.max_waiting_customers == null ? (
+            <span className="mt-1 block text-xs text-muted">Unlimited</span>
+          ) : atCapacity ? (
+            <span className="mt-1 block text-xs font-semibold text-danger">
+              FULL
+            </span>
+          ) : null}
+        </InfoCard>
         <InfoCard label="Status">{queueStatusLabel(queue.status)}</InfoCard>
         <InfoCard label="Created">{formatTimestamp(queue.created_at)}</InfoCard>
         <InfoCard label="Updated">{formatTimestamp(queue.updated_at)}</InfoCard>

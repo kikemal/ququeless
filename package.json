@@ -24,7 +24,8 @@
     "db:phase7-check": "supabase db query --local -f tests/integration/phase7_customer_notifications_checks.sql",
     "db:phase8-check": "supabase db query --local -f tests/integration/phase8_business_analytics_checks.sql",
     "db:phase9-check": "supabase db query --local -f tests/integration/phase9_business_settings_checks.sql",
-    "db:phase11-check": "supabase db query --local -f tests/integration/phase11_production_hardening_checks.sql"
+    "db:phase11-check": "supabase db query --local -f tests/integration/phase11_production_hardening_checks.sql",
+    "db:phase12-check": "supabase db query --local -f tests/integration/phase12_queue_capacity_checks.sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
