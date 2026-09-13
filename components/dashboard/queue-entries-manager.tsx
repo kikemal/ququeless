@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState, useTransition, type ReactNode } from "react";
 
 import {
   callNextEntryAction,
@@ -10,6 +10,21 @@ import {
 import { LiveStatusBadge } from "@/components/ui/live-status-badge";
 import { Button } from "@/components/ui/button";
 import { useQueueEntriesLive } from "@/hooks/use-live-queue";
+import {
+  callNextDisableReason,
+  callNextDisabledMessage,
+  callNextPendingKey,
+  entryActionPendingKey,
+  entryStatusLabel,
+  formatJoinedTime,
+  formatWaitingDuration,
+  isDestructiveStaffAction,
+  partitionQueueEntries,
+  staffActionLabel,
+  staffActionsForStatus,
+  type StaffEntryAction,
+} from "@/lib/dashboard/queue-workflow";
+import { cn } from "@/lib/utils";
 import type { Enums, Tables } from "@/types/database";
 
 export type QueueEntry = Pick<
@@ -34,12 +49,6 @@ type Props = {
   entries: QueueEntry[];
 };
 
-const activeStatuses = new Set<Enums<"entry_status">>([
-  "waiting",
-  "called",
-  "serving",
-]);
-
 export function QueueEntriesManager({
   queueId,
   queueStatus,
@@ -48,6 +57,7 @@ export function QueueEntriesManager({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const refresh = useCallback(() => {
@@ -59,190 +69,299 @@ export function QueueEntriesManager({
     onChange: refresh,
   });
 
-  const active = entries.filter((entry) => activeStatuses.has(entry.status));
-  const waitingCount = entries.filter((entry) => entry.status === "waiting")
-    .length;
+  const { waiting, active, terminal, counts } = partitionQueueEntries(entries);
+  const disableReason = callNextDisableReason({
+    queueStatus,
+    waitingCount: counts.waiting,
+    pending: isPending,
+  });
+  const callNextHint = callNextDisabledMessage(disableReason);
 
   function run(
+    key: string,
     task: () => Promise<{ error?: string; success?: boolean; message?: string }>,
   ) {
+    if (isPending) {
+      return;
+    }
     setError(null);
     setMessage(null);
+    setPendingKey(key);
     startTransition(async () => {
-      const result = await task();
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await task();
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setMessage(result.message ?? "Updated.");
+        router.refresh();
+      } finally {
+        setPendingKey(null);
       }
-      setMessage(result.message ?? "Updated.");
-      router.refresh();
     });
   }
 
+  function runTransition(entry: QueueEntry, action: StaffEntryAction) {
+    if (isDestructiveStaffAction(action)) {
+      const label =
+        action === "no_show"
+          ? `Mark #${entry.queue_number} ${entry.customer_name} as no-show?`
+          : `Skip #${entry.queue_number} ${entry.customer_name}?`;
+      if (!window.confirm(label)) {
+        return;
+      }
+    }
+    run(entryActionPendingKey(entry.id, action), () =>
+      transitionEntryAction(entry.id, action),
+    );
+  }
+
   return (
-    <section className="rounded-xl border border-border bg-surface p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Customers
-            </h2>
-            <LiveStatusBadge status={liveStatus} />
+    <section className="space-y-6">
+      <div className="rounded-xl border border-border bg-surface p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                Queue workflow
+              </h2>
+              <LiveStatusBadge status={liveStatus} />
+            </div>
+            <p className="mt-2 text-sm text-muted" aria-live="polite">
+              {counts.waiting} waiting · {counts.called + counts.serving}{" "}
+              active · {counts.completed} completed · {counts.skipped} skipped ·{" "}
+              {counts.no_show} no-show
+            </p>
           </div>
-          <p className="mt-1 text-sm text-muted">
-            {active.length} active · {waitingCount} waiting
-          </p>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <Button
+              type="button"
+              disabled={disableReason !== null}
+              onClick={() =>
+                run(callNextPendingKey(), () => callNextEntryAction(queueId))
+              }
+              aria-label="Call next waiting customer"
+            >
+              {pendingKey === callNextPendingKey()
+                ? "Calling…"
+                : "Call next"}
+            </Button>
+            {callNextHint && disableReason !== "pending" ? (
+              <p className="text-xs text-muted" role="status">
+                {callNextHint}
+              </p>
+            ) : null}
+          </div>
         </div>
-        <Button
-          type="button"
-          disabled={isPending || queueStatus !== "open" || waitingCount === 0}
-          onClick={() => run(() => callNextEntryAction(queueId))}
-        >
-          {isPending ? "Working…" : "Call next"}
-        </Button>
+
+        {error ? (
+          <p
+            className="mt-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+        {message && !error ? (
+          <p
+            className="mt-4 rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm text-accent"
+            role="status"
+          >
+            {message}
+          </p>
+        ) : null}
       </div>
 
-      {error ? (
-        <p
-          className="mt-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
-          role="alert"
-        >
-          {error}
-        </p>
-      ) : null}
-      {message && !error ? (
-        <p
-          className="mt-4 rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm text-accent"
-          role="status"
-        >
-          {message}
-        </p>
-      ) : null}
+      <WorkflowSection
+        title="Now serving"
+        empty="No customers are being called or served right now."
+        hasItems={active.length > 0}
+      >
+        <ul className="divide-y divide-border">
+          {active.map((entry) => (
+            <CustomerRow
+              key={entry.id}
+              entry={entry}
+              showWaitDuration={false}
+              isPending={isPending}
+              pendingKey={pendingKey}
+              onAction={runTransition}
+            />
+          ))}
+        </ul>
+      </WorkflowSection>
 
-      {entries.length === 0 ? (
-        <p className="mt-6 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-          No customers have joined this queue yet.
+      <WorkflowSection
+        title="Waiting"
+        empty="No customers are waiting."
+        count={counts.waiting}
+        hasItems={waiting.length > 0}
+      >
+        <ul className="divide-y divide-border">
+          {waiting.map((entry) => (
+            <CustomerRow
+              key={entry.id}
+              entry={entry}
+              showWaitDuration
+              isPending={isPending}
+              pendingKey={pendingKey}
+              onAction={runTransition}
+            />
+          ))}
+        </ul>
+      </WorkflowSection>
+
+      <WorkflowSection
+        title="Finished"
+        empty="No completed, skipped, or no-show customers yet."
+        count={terminal.length}
+        hasItems={terminal.length > 0}
+      >
+        <ul className="divide-y divide-border">
+          {[...terminal]
+            .reverse()
+            .slice(0, 12)
+            .map((entry) => (
+              <CustomerRow
+                key={entry.id}
+                entry={entry}
+                showWaitDuration={false}
+                isPending={isPending}
+                pendingKey={pendingKey}
+                onAction={runTransition}
+                readOnly
+              />
+            ))}
+        </ul>
+      </WorkflowSection>
+    </section>
+  );
+}
+
+function WorkflowSection({
+  title,
+  empty,
+  count,
+  hasItems,
+  children,
+}: {
+  title: string;
+  empty: string;
+  count?: number;
+  hasItems: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-surface p-5">
+      <h3 className="font-display text-base font-semibold text-foreground">
+        {title}
+        {typeof count === "number" ? (
+          <span className="ml-2 text-sm font-normal text-muted">({count})</span>
+        ) : null}
+      </h3>
+      {!hasItems ? (
+        <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted">
+          {empty}
         </p>
       ) : (
-        <div className="mt-5 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-border text-muted">
-              <tr>
-                <th className="px-3 py-3 font-medium">#</th>
-                <th className="px-3 py-3 font-medium">Customer</th>
-                <th className="px-3 py-3 font-medium">Joined</th>
-                <th className="px-3 py-3 font-medium">Status</th>
-                <th className="px-3 py-3 font-medium">Email</th>
-                <th className="px-3 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="px-3 py-4 font-display font-semibold text-foreground">
-                    {entry.queue_number}
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="font-medium text-foreground">
-                      {entry.customer_name}
-                    </div>
-                    {entry.customer_phone ? (
-                      <div className="mt-1 text-xs text-muted">
-                        {entry.customer_phone}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-4 text-muted">
-                    {new Intl.DateTimeFormat(undefined, {
-                      timeStyle: "short",
-                    }).format(new Date(entry.joined_at))}
-                  </td>
-                  <td className="px-3 py-4 capitalize text-muted">
-                    {entry.status.replace("_", " ")}
-                  </td>
-                  <td className="px-3 py-4 text-xs text-muted">
-                    {entry.email_notifications_enabled ? (
-                      <span>
-                        On
-                        {entry.latest_notification_status
-                          ? ` · ${entry.latest_notification_type ?? "update"} ${entry.latest_notification_status}`
-                          : ""}
-                      </span>
-                    ) : (
-                      "Off"
-                    )}
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {entry.status === "called" ? (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-9 px-3 text-xs"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              transitionEntryAction(entry.id, "serving"),
-                            )
-                          }
-                        >
-                          Start serving
-                        </Button>
-                      ) : null}
-                      {entry.status === "serving" ? (
-                        <Button
-                          type="button"
-                          className="h-9 px-3 text-xs"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              transitionEntryAction(entry.id, "completed"),
-                            )
-                          }
-                        >
-                          Complete
-                        </Button>
-                      ) : null}
-                      {entry.status === "waiting" ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-9 px-3 text-xs text-danger"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              transitionEntryAction(entry.id, "skipped"),
-                            )
-                          }
-                        >
-                          Skip
-                        </Button>
-                      ) : null}
-                      {entry.status === "called" ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-9 px-3 text-xs text-danger"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              transitionEntryAction(entry.id, "no_show"),
-                            )
-                          }
-                        >
-                          No-show
-                        </Button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="mt-4">{children}</div>
       )}
     </section>
+  );
+}
+
+function CustomerRow({
+  entry,
+  showWaitDuration,
+  isPending,
+  pendingKey,
+  onAction,
+  readOnly = false,
+}: {
+  entry: QueueEntry;
+  showWaitDuration: boolean;
+  isPending: boolean;
+  pendingKey: string | null;
+  onAction: (entry: QueueEntry, action: StaffEntryAction) => void;
+  readOnly?: boolean;
+}) {
+  const actions = readOnly ? [] : staffActionsForStatus(entry.status);
+  const waitLabel = showWaitDuration
+    ? formatWaitingDuration(entry.joined_at)
+    : null;
+
+  return (
+    <li className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className="font-display text-xl font-semibold text-foreground">
+            #{entry.queue_number}
+          </p>
+          <p className="truncate font-medium text-foreground">
+            {entry.customer_name}
+          </p>
+          <span
+            className={cn(
+              "inline-flex rounded-md px-2 py-0.5 text-xs font-medium",
+              entry.status === "serving" && "bg-accent-soft text-accent",
+              entry.status === "called" && "bg-accent-soft/60 text-accent",
+              entry.status === "waiting" && "bg-background text-muted",
+              (entry.status === "completed" ||
+                entry.status === "skipped" ||
+                entry.status === "no_show") &&
+                "bg-background text-muted",
+            )}
+          >
+            {entryStatusLabel(entry.status)}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Joined {formatJoinedTime(entry.joined_at)}
+          {waitLabel ? ` · Waiting ${waitLabel}` : null}
+          {entry.customer_phone ? ` · ${entry.customer_phone}` : null}
+        </p>
+        {entry.email_notifications_enabled ? (
+          <p className="mt-1 text-xs text-muted">
+            Email updates on
+            {entry.latest_notification_status
+              ? ` · ${entry.latest_notification_type ?? "update"} ${entry.latest_notification_status}`
+              : ""}
+          </p>
+        ) : null}
+      </div>
+
+      {actions.length > 0 ? (
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          {actions.map((action) => {
+            const key = entryActionPendingKey(entry.id, action);
+            const thisPending = pendingKey === key;
+            const destructive = isDestructiveStaffAction(action);
+            return (
+              <Button
+                key={action}
+                type="button"
+                variant={
+                  action === "completed"
+                    ? "primary"
+                    : destructive
+                      ? "ghost"
+                      : "secondary"
+                }
+                className={cn(
+                  "h-9 px-3 text-xs",
+                  destructive && "text-danger",
+                )}
+                disabled={isPending}
+                aria-label={`${staffActionLabel(action)} for ticket ${entry.queue_number}`}
+                onClick={() => onAction(entry, action)}
+              >
+                {thisPending ? "Working…" : staffActionLabel(action)}
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+    </li>
   );
 }

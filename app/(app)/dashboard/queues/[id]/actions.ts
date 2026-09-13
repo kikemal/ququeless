@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getPrimaryBusiness } from "@/lib/auth/business";
 import { mapQueueEntryErrorMessage } from "@/lib/dashboard/errors";
+import { staffActionSuccessMessage } from "@/lib/dashboard/queue-workflow";
 import { processNotificationsForEntry } from "@/lib/notifications/process";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
@@ -87,6 +88,14 @@ export async function callNextEntryAction(
     return { error: ctx.error ?? "Queue not found." };
   }
 
+  // Clear UX for paused/closed before hitting the RPC; RPC remains authoritative.
+  if (ctx.queue.status === "paused") {
+    return { error: "Queue is paused." };
+  }
+  if (ctx.queue.status === "closed") {
+    return { error: "Queue is closed." };
+  }
+
   const { data, error } = await ctx.supabase.rpc("call_next_entry", {
     p_queue_id: ctx.queue.id,
   });
@@ -162,5 +171,10 @@ export async function transitionEntryAction(
   await processNotificationsForEntry(entry.id);
 
   revalidatePath(`/dashboard/queues/${data[0].queue_id}`);
-  return { success: true, message: "Customer status updated." };
+  return {
+    success: true,
+    message: staffActionSuccessMessage(
+      newStatus as "serving" | "completed" | "skipped" | "no_show",
+    ),
+  };
 }

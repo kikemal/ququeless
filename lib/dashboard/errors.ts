@@ -269,7 +269,15 @@ export function mapQueueEntryErrorMessage(message: string | undefined): string {
   const value = (message ?? "").toLowerCase();
 
   if (value.includes("no waiting")) {
-    return "There are no waiting customers.";
+    return "No customers are waiting.";
+  }
+
+  if (value.includes("queue is paused") || value === "queue is paused.") {
+    return "Queue is paused.";
+  }
+
+  if (value.includes("queue is closed") || value === "queue is closed.") {
+    return "Queue is closed.";
   }
 
   if (value.includes("queue is not open")) {
@@ -289,10 +297,13 @@ export function mapQueueEntryErrorMessage(message: string | undefined): string {
   }
 
   if (value.includes("invalid transition")) {
-    return "That status change is not allowed for this customer.";
+    return "This action is no longer available.";
   }
 
   if (value.includes("already in status")) {
+    if (value.includes("completed")) {
+      return "This customer has already been served.";
+    }
     return "This customer is already in that status.";
   }
 
