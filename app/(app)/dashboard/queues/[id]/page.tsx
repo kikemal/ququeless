@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { notFound } from "next/navigation";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/dashboard/queue-detail";
 import { requirePrimaryBusiness } from "@/lib/auth/business";
 import { requireAuthUser } from "@/lib/auth/session";
+import { processNotificationsForEntry } from "@/lib/notifications/process";
 import { buildPublicQueueUrl } from "@/lib/public-url";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,7 +40,7 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
     .maybeSingle();
 
   if (error) {
-    console.error("QueueDetailPage error", error.message);
+    console.error("QueueDetailPage error", error.code);
   }
 
   if (!data) {
@@ -54,13 +56,16 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
     .eq("business_id", business.id)
     .order("joined_at", { ascending: true });
 
-  if (entriesError) console.error("QueueDetailPage entries error", entriesError.message);
+  if (entriesError) {
+    console.error("QueueDetailPage entries error", entriesError.code);
+  }
 
   const entryIds = (entries ?? []).map((entry) => entry.id);
   const notificationByEntry = new Map<
     string,
     { status: string; type: string }
   >();
+  const recoverEntryIds: string[] = [];
 
   if (entryIds.length > 0) {
     const { data: notifications, error: notificationError } = await supabase
@@ -71,7 +76,10 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
       .order("created_at", { ascending: false });
 
     if (notificationError) {
-      console.error("QueueDetailPage notifications error", notificationError.message);
+      console.error(
+        "QueueDetailPage notifications error",
+        notificationError.code,
+      );
     } else {
       for (const row of notifications ?? []) {
         if (!notificationByEntry.has(row.queue_entry_id)) {
@@ -80,8 +88,25 @@ export default async function QueueDetailPage({ params }: QueueDetailPageProps) 
             type: row.type,
           });
         }
+        // Orphan recovery: pending/failed/sending may need claim/expire.
+        if (
+          (row.status === "pending" ||
+            row.status === "failed" ||
+            row.status === "sending") &&
+          !recoverEntryIds.includes(row.queue_entry_id)
+        ) {
+          recoverEntryIds.push(row.queue_entry_id);
+        }
       }
     }
+  }
+
+  if (recoverEntryIds.length > 0) {
+    after(() => {
+      for (const entryId of recoverEntryIds) {
+        void processNotificationsForEntry(entryId);
+      }
+    });
   }
 
   const enrichedEntries: QueueEntry[] = (entries ?? []).map((entry) => {

@@ -51,6 +51,8 @@ async function deliverClaimed(
       subject,
       text,
       notificationType: row.type,
+      // Reclaim-after-send races: same notification id → same provider key.
+      idempotencyKey: row.id,
     });
 
     await finalize(

@@ -6,6 +6,8 @@ export type SendCustomerEmailInput = {
   text: string;
   html?: string;
   notificationType: CustomerNotificationType;
+  /** Provider idempotency key (notification row id). Never a customer token. */
+  idempotencyKey?: string;
 };
 
 export type SendCustomerEmailResult = {
@@ -64,12 +66,17 @@ export function createResendEmailTransport(): CustomerEmailTransport {
   return {
     async send(input) {
       try {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        };
+        if (input.idempotencyKey) {
+          headers["Idempotency-Key"] = input.idempotencyKey.slice(0, 256);
+        }
+
         const response = await fetch("https://api.resend.com/emails", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             from,
             to: [input.to],

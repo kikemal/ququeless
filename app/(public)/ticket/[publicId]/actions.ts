@@ -1,5 +1,7 @@
 "use server";
 
+import { after } from "next/server";
+
 import { mapTicketErrorMessage } from "@/lib/dashboard/errors";
 import { processNotificationsForTicket } from "@/lib/notifications/process";
 import { createClient } from "@/lib/supabase/server";
@@ -61,8 +63,10 @@ export async function cancelTicketAction(publicId: string, accessToken: string) 
     return { error: mapTicketErrorMessage(error.message) };
   }
 
-  // Delivery is best-effort and must not undo cancellation.
-  await processNotificationsForTicket(publicId, accessToken);
+  // Delivery is best-effort and must not undo cancellation or block UX.
+  after(() => {
+    void processNotificationsForTicket(publicId, accessToken);
+  });
 
   return { success: true };
 }

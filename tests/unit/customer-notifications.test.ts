@@ -62,8 +62,10 @@ describe("notification content", () => {
     assert.equal(isRetryableNotificationStatus("pending", 0), true);
     assert.equal(isRetryableNotificationStatus("failed", 2), true);
     assert.equal(isRetryableNotificationStatus("failed", 3), false);
+    assert.equal(isRetryableNotificationStatus("sending", 1), false);
     assert.equal(isTerminalNotificationStatus("sent", 1), true);
     assert.equal(isTerminalNotificationStatus("failed", 3), true);
+    assert.equal(isTerminalNotificationStatus("sending", 3), true);
   });
 });
 

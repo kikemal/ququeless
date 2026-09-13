@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   LIVE_POLL_FALLBACK_MS,
+  queueEntriesChannel,
   queueRefreshChannel,
   type LiveStatus,
 } from "@/lib/realtime/channels";
@@ -138,7 +139,7 @@ export function useQueueEntriesLive({
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`queue-entries:${queueId}`)
+      .channel(queueEntriesChannel(queueId))
       .on(
         "postgres_changes",
         {

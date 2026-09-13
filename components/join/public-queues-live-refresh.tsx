@@ -66,6 +66,20 @@ export function PublicQueuesLiveRefresh({
               window.clearInterval(pollTimer);
               pollTimer = null;
             }
+            return;
+          }
+
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            liveCount = Math.max(0, liveCount - 1);
+            if (pollTimer === null) {
+              pollTimer = window.setInterval(() => {
+                onSignal();
+              }, LIVE_POLL_FALLBACK_MS);
+            }
           }
         }),
     );

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { getPrimaryBusiness } from "@/lib/auth/business";
 import { mapQueueEntryErrorMessage } from "@/lib/dashboard/errors";
@@ -105,7 +106,11 @@ export async function callNextEntryAction(
     return { error: mapQueueEntryErrorMessage(error?.message) };
   }
 
-  await processNotificationsForEntry(data[0].id);
+  const entryId = data[0].id;
+  // Delivery is best-effort and must not delay or undo the queue transition.
+  after(() => {
+    void processNotificationsForEntry(entryId);
+  });
 
   revalidatePath(`/dashboard/queues/${ctx.queue.id}`);
   return {
@@ -168,7 +173,10 @@ export async function transitionEntryAction(
     return { error: mapQueueEntryErrorMessage(error?.message) };
   }
 
-  await processNotificationsForEntry(entry.id);
+  const notifiedEntryId = entry.id;
+  after(() => {
+    void processNotificationsForEntry(notifiedEntryId);
+  });
 
   revalidatePath(`/dashboard/queues/${data[0].queue_id}`);
   return {
