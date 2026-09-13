@@ -20,6 +20,7 @@ import {
 } from "@/lib/dashboard/queue-capacity";
 import { queueStatusLabel, type QueueStatus } from "@/lib/dashboard/queue-status";
 import { createClient } from "@/lib/supabase/server";
+import { publicJoinStatusMessage } from "@/lib/ux/copy";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Join queue" };
@@ -49,31 +50,6 @@ type PublicQueue = {
   service_description: string | null;
   average_service_minutes: number;
 };
-
-function statusMessage(
-  businessIsOpen: boolean,
-  status: QueueStatus,
-  isFull: boolean,
-): string {
-  if (!businessIsOpen) {
-    return "This business is closed. Joining is unavailable until opening hours.";
-  }
-  if (status === "open" && isFull) {
-    return "Queue full. Please try again later.";
-  }
-  switch (status) {
-    case "open":
-      return "This queue is open. Enter your details to join.";
-    case "paused":
-      return "This queue is paused. Joining is temporarily unavailable.";
-    case "closed":
-      return "This queue is closed and not accepting customers.";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
 
 function queueCardClass(theme: BrandingTheme): string {
   switch (theme) {
@@ -263,18 +239,16 @@ export default async function JoinQueuePage({ params }: JoinPageProps) {
 
                 <p
                   className={cn(
-                    "mt-4 text-sm",
+                    "mt-4 text-sm leading-relaxed",
                     canJoin ? "text-muted" : "text-foreground",
                   )}
                   role="status"
                 >
-                  {blocked === "Business closed"
-                    ? "Business closed"
-                    : blocked === "Queue paused"
-                      ? "Queue paused"
-                      : blocked === "Queue closed"
-                        ? "Queue closed"
-                        : statusMessage(businessIsOpen, queue.queue_status, isFull)}
+                  {publicJoinStatusMessage(
+                    businessIsOpen,
+                    queue.queue_status,
+                    isFull,
+                  )}
                 </p>
 
                 <div className="mt-5 border-t border-border pt-5">

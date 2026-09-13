@@ -20,12 +20,20 @@ export default async function QrPage() {
 
   const { data: queues } = await supabase
     .from("queues")
-    .select("id, name")
+    .select("id, name, services(name)")
     .eq("business_id", business.id)
     .order("created_at", { ascending: true })
     .limit(1);
 
   const primaryQueue = queues?.[0] ?? null;
+  const serviceRelation = primaryQueue?.services as
+    | { name: string }
+    | { name: string }[]
+    | null
+    | undefined;
+  const serviceName = Array.isArray(serviceRelation)
+    ? serviceRelation[0]?.name
+    : serviceRelation?.name;
 
   return (
     <main className="space-y-6">
@@ -43,8 +51,8 @@ export default async function QrPage() {
         <PublicQueueQr
           publicQueueUrl={publicQueueUrl}
           businessName={business.name}
-          queueName={primaryQueue?.name ?? "Public queue"}
-          serviceName={business.name}
+          queueName={primaryQueue?.name ?? "All public queues"}
+          serviceName={serviceName ?? "Scan to join any open queue"}
           slug={business.slug}
         />
       ) : (

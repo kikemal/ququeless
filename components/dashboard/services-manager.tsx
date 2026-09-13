@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState, useTransition } from "react";
+import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -272,6 +272,7 @@ function ServiceFormDialog({
   onSuccess,
 }: ServiceFormDialogProps) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [state, formAction, pending] = useActionState(
     async (prev: ServiceActionState, formData: FormData) => {
       const result = await action(prev, formData);
@@ -293,6 +294,17 @@ function ServiceFormDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose, pending]);
 
+  useEffect(() => {
+    const root = dialogRef.current;
+    if (!root) {
+      return;
+    }
+    const focusable = root.querySelector<HTMLElement>(
+      "input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled])",
+    );
+    focusable?.focus();
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4 sm:items-center"
@@ -304,10 +316,11 @@ function ServiceFormDialog({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-lg rounded-xl border border-border bg-surface p-5 shadow-lg sm:p-6"
+        className="max-h-[min(100dvh-2rem,40rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg sm:p-6"
       >
         <div className="flex items-start justify-between gap-3">
           <h2 id={titleId} className="font-display text-xl font-semibold text-foreground">

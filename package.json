@@ -30,7 +30,8 @@
     "db:phase14-check": "supabase db query --local -f tests/integration/phase14_ticket_experience_checks.sql",
     "db:phase15-check": "supabase db query --local -f tests/integration/phase15_staff_workflow_checks.sql",
     "db:phase16-check": "supabase db query --local -f tests/integration/phase16_queue_history_checks.sql",
-    "db:phase17-check": "supabase db query --local -f tests/integration/phase17_reliability_checks.sql"
+    "db:phase17-check": "supabase db query --local -f tests/integration/phase17_reliability_checks.sql",
+    "db:phase18-check": "supabase db query --local -f tests/integration/phase18_ux_checks.sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requirePrimaryBusiness } from "@/lib/auth/business";
 import { requireAuthUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { DASHBOARD_GET_STARTED_DESCRIPTION } from "@/lib/ux/copy";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -36,14 +37,14 @@ export default async function DashboardPage() {
   if (activeServicesResult.error) {
     console.error(
       "Dashboard active services count",
-      activeServicesResult.error.message,
+      activeServicesResult.error.code,
     );
   }
   if (queuesResult.error) {
-    console.error("Dashboard queues count", queuesResult.error.message);
+    console.error("Dashboard queues count", queuesResult.error.code);
   }
   if (openQueuesResult.error) {
-    console.error("Dashboard open queues count", openQueuesResult.error.message);
+    console.error("Dashboard open queues count", openQueuesResult.error.code);
   }
 
   const activeServices = activeServicesResult.count ?? 0;
@@ -71,33 +72,33 @@ export default async function DashboardPage() {
       </dl>
 
       {!hasSetup ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-10">
-          <h2 className="font-display text-xl font-semibold text-foreground">
-            Get started
-          </h2>
-          <p className="mt-2 max-w-xl text-sm text-muted">
-            Create a service, then open a queue for it. Customer joining and QR
-            codes come later.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button href="/dashboard/services">Create your first service</Button>
-            <Button href="/dashboard/queues" variant="secondary">
-              View queues
-            </Button>
-          </div>
-        </div>
+        <EmptyState
+          title="Get started"
+          description={DASHBOARD_GET_STARTED_DESCRIPTION}
+          action={
+            <>
+              <Button href="/dashboard/services">Create your first service</Button>
+              <Button href="/dashboard/queues" variant="secondary">
+                View queues
+              </Button>
+              <Button href="/dashboard/qr" variant="secondary">
+                QR code
+              </Button>
+            </>
+          }
+        />
       ) : (
         <div className="flex flex-wrap gap-3">
-          <Button href="/dashboard/services">Manage services</Button>
-          <Button href="/dashboard/queues" variant="secondary">
-            Manage queues
+          <Button href="/dashboard/queues">Open queues</Button>
+          <Button href="/dashboard/services" variant="secondary">
+            Manage services
           </Button>
-          <Link
-            href="/dashboard/services"
-            className="inline-flex h-11 items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
-          >
-            Add another service
-          </Link>
+          <Button href="/dashboard/qr" variant="secondary">
+            Share QR
+          </Button>
+          <Button href="/dashboard/history" variant="secondary">
+            History
+          </Button>
         </div>
       )}
     </main>

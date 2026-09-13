@@ -129,7 +129,8 @@ describe("buildTicketTimeline", () => {
     assert.equal(steps[1].state, "pending");
     assert.equal(steps[2].label, "Cancelled");
     assert.equal(steps[2].state, "current");
-    assert.equal(customerStatusLabel("cancelled"), "Cancelled");
+    assert.equal(customerStatusLabel("cancelled"), "This ticket was cancelled");
+    assert.equal(customerStatusLabel("skipped"), "This ticket was skipped");
   });
 
   it("tolerates missing timestamps", () => {

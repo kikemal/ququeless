@@ -40,18 +40,19 @@ export function DashboardShell({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!menuOpen) {
+    if (!menuOpen && !mobileOpen) {
       return;
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMenuOpen(false);
+        setMobileOpen(false);
       }
     };
 
     const onPointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+      if (menuOpen && !menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
@@ -62,7 +63,18 @@ export function DashboardShell({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousedown", onPointerDown);
     };
-  }, [menuOpen]);
+  }, [menuOpen, mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
 
   function closeOverlays() {
     setMobileOpen(false);
@@ -112,7 +124,7 @@ export function DashboardShell({
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border lg:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:hidden"
                 aria-expanded={mobileOpen}
                 aria-controls="mobile-dashboard-nav"
                 onClick={() => setMobileOpen((value) => !value)}
@@ -203,6 +215,7 @@ export function DashboardShell({
                         onClick={closeOverlays}
                         className={cn(
                           "block rounded-lg px-3 py-2.5 text-sm font-medium",
+                          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                           active
                             ? "bg-accent-soft text-accent"
                             : "text-muted hover:bg-background hover:text-foreground",

@@ -65,24 +65,37 @@ export function isTerminalTicketStatus(
 export function customerStatusLabel(status: CustomerFacingStatus): string {
   switch (status) {
     case "waiting":
-      return "Waiting";
+      return "You're waiting";
     case "called":
-      return "Please come to the desk";
+      return "Please get ready";
     case "serving":
-      return "Being served";
+      return "You're being served";
     case "completed":
-      return "Completed";
+      return "Your visit is complete";
     case "skipped":
-      return "Skipped";
+      return "This ticket was skipped";
     case "no_show":
-      return "No-show";
+      return "This ticket was marked as no-show";
     case "cancelled":
-      return "Cancelled";
+      return "This ticket was cancelled";
     default: {
       const _exhaustive: never = status;
       return _exhaustive;
     }
   }
+}
+
+/**
+ * Primary headline for the ticket page. Uses people-ahead only for waiting.
+ */
+export function customerStatusHeadline(
+  status: CustomerFacingStatus,
+  peopleAhead?: number | null,
+): string {
+  if (status === "waiting" && peopleAhead === 0) {
+    return "You're next";
+  }
+  return customerStatusLabel(status);
 }
 
 export function customerStatusSummary(status: CustomerFacingStatus): string {

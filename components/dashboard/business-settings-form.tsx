@@ -48,9 +48,11 @@ const initialState: SettingsActionState = {};
 function DayRow({
   formId,
   day,
+  pending,
 }: {
   formId: string;
   day: DayScheduleInput;
+  pending: boolean;
 }) {
   const [closed, setClosed] = useState(day.isClosed);
   const label =
@@ -66,6 +68,7 @@ function DayRow({
           name={`day_${day.weekday}_closed`}
           value="true"
           checked={closed}
+          disabled={pending}
           onChange={(event) => setClosed(event.target.checked)}
         />
         Closed
@@ -79,7 +82,7 @@ function DayRow({
           name={`day_${day.weekday}_open`}
           type="time"
           defaultValue={day.openTime}
-          disabled={closed}
+          disabled={closed || pending}
           required={!closed}
         />
       </div>
@@ -92,7 +95,7 @@ function DayRow({
           name={`day_${day.weekday}_close`}
           type="time"
           defaultValue={day.closeTime}
-          disabled={closed}
+          disabled={closed || pending}
           required={!closed}
         />
       </div>
@@ -166,6 +169,7 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             maxLength={BUSINESS_NAME_MAX}
             defaultValue={initial.name}
             autoComplete="organization"
+            disabled={pending}
           />
         </div>
 
@@ -193,9 +197,10 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             rows={3}
             defaultValue={initial.publicDescription}
             placeholder="Short description customers see on your queue page"
+            disabled={pending}
             className={cn(
               "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground",
-              "placeholder:text-muted/80",
+              "placeholder:text-muted/80 disabled:cursor-not-allowed disabled:opacity-60",
               "focus-visible:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30",
             )}
           />
@@ -219,8 +224,10 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             id={`${formId}-timezone`}
             name="timezone"
             defaultValue={initial.timezone}
+            disabled={pending}
             className={cn(
               "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground",
+              "disabled:cursor-not-allowed disabled:opacity-60",
               "focus-visible:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30",
             )}
           >
@@ -236,7 +243,7 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
           <p className="text-sm font-medium text-foreground">Weekly schedule</p>
           <div className="space-y-2">
             {schedule.map((day) => (
-              <DayRow key={day.weekday} formId={formId} day={day} />
+              <DayRow key={day.weekday} formId={formId} day={day} pending={pending} />
             ))}
           </div>
         </div>
@@ -261,21 +268,22 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             rows={4}
             defaultValue={initial.publicInstructions}
             placeholder="e.g. Please arrive within 10 minutes when called."
+            disabled={pending}
             className={cn(
               "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground",
-              "placeholder:text-muted/80 whitespace-pre-wrap",
+              "placeholder:text-muted/80 whitespace-pre-wrap disabled:cursor-not-allowed disabled:opacity-60",
               "focus-visible:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30",
             )}
           />
         </div>
 
-        <fieldset className="space-y-3">
+        <fieldset className="space-y-3" disabled={pending}>
           <legend className="text-sm font-medium text-foreground">Theme</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {BRANDING_THEMES.map((theme) => (
               <label
                 key={theme}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface px-3 py-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft/40"
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface px-3 py-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft/40 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
               >
                 <input
                   type="radio"
@@ -315,6 +323,7 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             autoComplete="email"
             defaultValue={initial.contactEmail}
             placeholder="Optional"
+            disabled={pending}
           />
         </div>
 
@@ -328,6 +337,7 @@ export function BusinessSettingsForm({ initial }: BusinessSettingsFormProps) {
             autoComplete="tel"
             defaultValue={initial.contactPhone}
             placeholder="Optional"
+            disabled={pending}
           />
         </div>
       </section>

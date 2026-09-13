@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition, type ReactNode } from "react";
 
@@ -217,6 +218,20 @@ export function QueueEntriesManager({
         empty="No completed, skipped, or no-show customers yet."
         count={terminal.length}
         hasItems={terminal.length > 0}
+        footer={
+          terminal.length > 0 ? (
+            <p className="mt-4 text-sm text-muted">
+              Showing the {Math.min(12, terminal.length)} most recent.
+              {terminal.length > 12 ? " " : " "}
+              <Link
+                href={`/dashboard/history?queue=${encodeURIComponent(queueId)}`}
+                className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                View full history
+              </Link>
+            </p>
+          ) : null
+        }
       >
         <ul className="divide-y divide-border">
           {[...terminal]
@@ -244,12 +259,14 @@ function WorkflowSection({
   empty,
   count,
   hasItems,
+  footer,
   children,
 }: {
   title: string;
   empty: string;
   count?: number;
   hasItems: boolean;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -267,6 +284,7 @@ function WorkflowSection({
       ) : (
         <div className="mt-4">{children}</div>
       )}
+      {footer}
     </section>
   );
 }
@@ -304,8 +322,9 @@ function CustomerRow({
           <span
             className={cn(
               "inline-flex rounded-md px-2 py-0.5 text-xs font-medium",
-              entry.status === "serving" && "bg-accent-soft text-accent",
-              entry.status === "called" && "bg-accent-soft/60 text-accent",
+              entry.status === "serving" && "bg-accent text-white",
+              entry.status === "called" &&
+                "border border-accent/50 bg-accent-soft/40 text-accent",
               entry.status === "waiting" && "bg-background text-muted",
               (entry.status === "completed" ||
                 entry.status === "skipped" ||
@@ -313,7 +332,11 @@ function CustomerRow({
                 "bg-background text-muted",
             )}
           >
-            {entryStatusLabel(entry.status)}
+            {entry.status === "serving"
+              ? "Now serving"
+              : entry.status === "called"
+                ? "At desk"
+                : entryStatusLabel(entry.status)}
           </span>
         </div>
         <p className="mt-1 text-xs text-muted">

@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { invitationStatus } from "@/lib/team/invitation";
+import {
+  removeStaffConfirmMessage,
+  revokeInvitationConfirmMessage,
+} from "@/lib/ux/copy";
 import type { Enums } from "@/types/database";
 
 export type TeamMemberRow = {
@@ -194,6 +198,15 @@ export function TeamManager({
                     variant="secondary"
                     disabled={isPending && pendingId === member.membershipId}
                     onClick={() => {
+                      if (
+                        !window.confirm(
+                          removeStaffConfirmMessage(
+                            member.fullName ?? member.email ?? "staff member",
+                          ),
+                        )
+                      ) {
+                        return;
+                      }
                       const fd = new FormData();
                       fd.set("membershipId", member.membershipId);
                       runAction(member.membershipId, removeStaffAction, fd);
@@ -270,6 +283,13 @@ export function TeamManager({
                           variant="secondary"
                           disabled={isPending && pendingId === invite.id}
                           onClick={() => {
+                            if (
+                              !window.confirm(
+                                revokeInvitationConfirmMessage(invite.email),
+                              )
+                            ) {
+                              return;
+                            }
                             const fd = new FormData();
                             fd.set("invitationId", invite.id);
                             runAction(invite.id, revokeInvitationAction, fd);

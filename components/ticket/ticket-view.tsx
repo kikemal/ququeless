@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useQueueRefreshSignal } from "@/hooks/use-live-queue";
 import {
   buildTicketTimeline,
-  customerStatusLabel,
+  customerStatusHeadline,
   customerStatusSummary,
   formatTicketTimestamp,
   isTerminalTicketStatus,
@@ -205,7 +205,7 @@ export function TicketView({ publicId }: { publicId: string }) {
             Your number
           </p>
           <p
-            className="mt-2 font-display text-6xl font-semibold tracking-tight text-foreground sm:text-7xl"
+            className="mt-2 font-display text-5xl font-semibold tracking-tight text-foreground tabular-nums sm:text-6xl md:text-7xl"
             aria-live="polite"
           >
             {ticket.queue_number}
@@ -217,7 +217,7 @@ export function TicketView({ publicId }: { publicId: string }) {
             )}
             role="status"
           >
-            {customerStatusLabel(facing)}
+            {customerStatusHeadline(facing, ticket.people_ahead)}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             {customerStatusSummary(facing)}
