@@ -626,6 +626,33 @@ export type Database = {
         Args: { p_end: string; p_start: string }
         Returns: Json
       }
+      get_my_business_queue_history: {
+        Args: {
+          p_end: string
+          p_limit?: number
+          p_offset?: number
+          p_outcome?: string | null
+          p_queue_id?: string | null
+          p_start: string
+        }
+        Returns: {
+          called_at: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          joined_at: string
+          outcome: string
+          queue_name: string
+          queue_number: number
+          service_name: string
+          serving_at: string | null
+          status: Database["public"]["Enums"]["entry_status"]
+          total_count: number
+          wait_seconds: number | null
+        }[]
+      }
       get_ticket: {
         Args: { p_access_token: string; p_public_id: string }
         Returns: {
