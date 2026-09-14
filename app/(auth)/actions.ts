@@ -7,6 +7,7 @@ import { getPrimaryBusiness } from "@/lib/auth/business";
 import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 import { slugifyBusinessName, slugWithSuffix } from "@/lib/business/slug";
 import { isBusinessType } from "@/lib/business/types";
+import { getAppOrigin } from "@/lib/public-url";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -52,10 +53,13 @@ export async function signupAction(
   }
 
   const supabase = await createClient();
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000";
+  const origin = getAppOrigin();
+  if (!origin) {
+    console.error("signupAction missing NEXT_PUBLIC_APP_URL");
+    return {
+      error: "Application URL is not configured. Set NEXT_PUBLIC_APP_URL.",
+    };
+  }
 
   const emailRedirectTo = safeNext
     ? `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
