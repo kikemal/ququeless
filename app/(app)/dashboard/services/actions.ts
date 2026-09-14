@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getPrimaryBusiness } from "@/lib/auth/business";
+import { getPrimaryBusiness, getPrimaryMembership } from "@/lib/auth/business";
 import { mapServiceErrorMessage } from "@/lib/dashboard/errors";
 import {
   optionalTrimmedText,
@@ -42,8 +42,27 @@ async function requireOwnerContext() {
     };
   }
 
+  const membership = await getPrimaryMembership(user.id);
+  if (!membership) {
+    return {
+      error: "Create your business before managing services." as const,
+      supabase,
+      user,
+      business: null,
+    };
+  }
+
+  if (membership.role !== "business_owner") {
+    return {
+      error: "Only business owners can manage services." as const,
+      supabase,
+      user,
+      business: null,
+    };
+  }
+
   const business = await getPrimaryBusiness(user.id);
-  if (!business) {
+  if (!business || business.id !== membership.businessId) {
     return {
       error: "Create your business before managing services." as const,
       supabase,

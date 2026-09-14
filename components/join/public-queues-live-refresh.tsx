@@ -49,6 +49,22 @@ export function PublicQueuesLiveRefresh({
     let cancelled = false;
     let pollTimer: number | null = null;
     let liveCount = 0;
+
+    const ensurePoll = () => {
+      if (pollTimer === null) {
+        pollTimer = window.setInterval(() => {
+          onSignal();
+        }, LIVE_POLL_FALLBACK_MS);
+      }
+    };
+
+    const clearPoll = () => {
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
     const supabase = createClient();
     const channels = ids.map((queueId) =>
       supabase
@@ -62,9 +78,8 @@ export function PublicQueuesLiveRefresh({
           }
           if (status === "SUBSCRIBED") {
             liveCount += 1;
-            if (pollTimer !== null && liveCount === ids.length) {
-              window.clearInterval(pollTimer);
-              pollTimer = null;
+            if (liveCount >= ids.length) {
+              clearPoll();
             }
             return;
           }
@@ -75,24 +90,17 @@ export function PublicQueuesLiveRefresh({
             status === "CLOSED"
           ) {
             liveCount = Math.max(0, liveCount - 1);
-            if (pollTimer === null) {
-              pollTimer = window.setInterval(() => {
-                onSignal();
-              }, LIVE_POLL_FALLBACK_MS);
-            }
+            ensurePoll();
           }
         }),
     );
 
-    pollTimer = window.setInterval(() => {
-      onSignal();
-    }, LIVE_POLL_FALLBACK_MS);
+    // Poll only until realtime is fully connected (or after a later drop).
+    ensurePoll();
 
     return () => {
       cancelled = true;
-      if (pollTimer !== null) {
-        window.clearInterval(pollTimer);
-      }
+      clearPoll();
       for (const channel of channels) {
         void supabase.removeChannel(channel);
       }

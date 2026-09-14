@@ -5,8 +5,13 @@ import type { Database } from "@/types/database";
 /**
  * Service-role client for trusted server-only operations.
  * Never import this module from Client Components or browser bundles.
+ * Currently unused by app routes; retained for optional trusted server jobs.
  */
 export function createAdminClient() {
+  if (typeof window !== "undefined") {
+    throw new Error("createAdminClient must not run in the browser");
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

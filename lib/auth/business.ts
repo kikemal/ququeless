@@ -37,7 +37,7 @@ export async function getPrimaryBusiness(
     .maybeSingle();
 
   if (membershipError) {
-    console.error("getPrimaryBusiness membership error", membershipError.message);
+    console.error("getPrimaryBusiness membership error", membershipError.code);
     return null;
   }
 
@@ -54,7 +54,7 @@ export async function getPrimaryBusiness(
     .maybeSingle();
 
   if (businessError) {
-    console.error("getPrimaryBusiness business error", businessError.message);
+    console.error("getPrimaryBusiness business error", businessError.code);
     return null;
   }
 
@@ -94,7 +94,7 @@ export async function getPrimaryMembership(
     .maybeSingle();
 
   if (error) {
-    console.error("getPrimaryMembership error", error.message);
+    console.error("getPrimaryMembership error", error.code);
     return null;
   }
 
