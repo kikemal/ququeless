@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 
 import { mapAuthErrorMessage, mapBusinessErrorMessage } from "@/lib/auth/errors";
 import { getPrimaryBusiness } from "@/lib/auth/business";
@@ -17,6 +17,21 @@ export type AuthActionState = {
 };
 
 const MIN_PASSWORD_LENGTH = 8;
+
+const SUPABASE_UNAVAILABLE =
+  "Sign-in is unavailable until Supabase is configured for this site.";
+
+async function openSupabase() {
+  try {
+    return await createClient();
+  } catch (error) {
+    console.error(
+      "supabase client unavailable",
+      error instanceof Error ? error.name : "unknown",
+    );
+    return null;
+  }
+}
 
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -52,7 +67,11 @@ export async function signupAction(
     return { error: "Passwords do not match." };
   }
 
-  const supabase = await createClient();
+  const supabase = await openSupabase();
+  if (!supabase) {
+    return { error: SUPABASE_UNAVAILABLE };
+  }
+
   const origin = getAppOrigin();
   if (!origin) {
     console.error("signupAction missing NEXT_PUBLIC_APP_URL");
@@ -108,33 +127,52 @@ export async function loginAction(
     return { error: "Email and password are required." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    console.error("loginAction error", error?.code ?? "unknown");
-    return { error: mapAuthErrorMessage(error?.message) };
+  const supabase = await openSupabase();
+  if (!supabase) {
+    return { error: SUPABASE_UNAVAILABLE };
   }
 
-  const safeNext = getSafeAuthRedirect(nextPath);
-  if (safeNext) {
-    redirect(safeNext);
-  }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const business = await getPrimaryBusiness(data.user.id);
-  if (!business) {
-    redirect("/onboarding");
-  }
+    if (error || !data.user) {
+      console.error("loginAction error", error?.code ?? "unknown");
+      return { error: mapAuthErrorMessage(error?.message) };
+    }
 
-  redirect("/dashboard");
+    const safeNext = getSafeAuthRedirect(nextPath);
+    if (safeNext) {
+      redirect(safeNext);
+    }
+
+    const business = await getPrimaryBusiness(data.user.id);
+    if (!business) {
+      redirect("/onboarding");
+    }
+
+    redirect("/dashboard");
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error(
+      "loginAction failed",
+      error instanceof Error ? error.name : "unknown",
+    );
+    return {
+      error: mapAuthErrorMessage(
+        error instanceof Error ? error.message : undefined,
+      ),
+    };
+  }
 }
 
 export async function logoutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  const supabase = await openSupabase();
+  if (supabase) {
+    await supabase.auth.signOut();
+  }
   redirect("/login");
 }
 
@@ -159,7 +197,11 @@ export async function createBusinessAction(
     return { error: "Enter a valid business email, or leave it blank." };
   }
 
-  const supabase = await createClient();
+  const supabase = await openSupabase();
+  if (!supabase) {
+    return { error: SUPABASE_UNAVAILABLE };
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
