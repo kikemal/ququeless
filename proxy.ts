@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && AUTH_ROUTES.has(pathname)) {
+  if (user && supabase && AUTH_ROUTES.has(pathname)) {
     const nextParam = request.nextUrl.searchParams.get("next");
     const safeNext = getSafeAuthRedirect(nextParam);
     if (safeNext) {
@@ -50,7 +50,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && (pathname === "/dashboard" || pathname.startsWith("/dashboard/"))) {
+  if (
+    user &&
+    supabase &&
+    (pathname === "/dashboard" || pathname.startsWith("/dashboard/"))
+  ) {
     const { data: memberships, error } = await supabase
       .from("business_members")
       .select("business_id")
@@ -69,7 +73,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (user && pathname === "/onboarding") {
+  if (user && supabase && pathname === "/onboarding") {
     const { data: memberships, error } = await supabase
       .from("business_members")
       .select("business_id")

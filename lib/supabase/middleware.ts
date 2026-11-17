@@ -8,9 +8,7 @@ function getSupabaseEnv() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    );
+    return null;
   }
 
   return { url, anonKey };
@@ -25,7 +23,15 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const { url, anonKey } = getSupabaseEnv();
+  const env = getSupabaseEnv();
+  if (!env) {
+    console.error(
+      "proxy skipped auth refresh: missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    );
+    return { supabase: null, user: null, supabaseResponse };
+  }
+
+  const { url, anonKey } = env;
 
   const supabase = createServerClient<Database>(url, anonKey, {
     cookies: {
@@ -52,9 +58,19 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error("proxy session refresh failed", error.code ?? error.name);
+    }
+    user = data.user ?? null;
+  } catch (error) {
+    console.error(
+      "proxy session refresh failed",
+      error instanceof Error ? error.name : "unknown",
+    );
+  }
 
   return { supabase, user, supabaseResponse };
 }
