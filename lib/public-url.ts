@@ -3,6 +3,8 @@
  * Origin comes from server env — never from client-supplied arbitrary hosts.
  */
 
+import { readEnv } from "@/lib/env";
+
 function normalizeOrigin(raw: string | undefined): string | null {
   if (!raw) {
     return null;
@@ -26,7 +28,7 @@ function normalizeOrigin(raw: string | undefined): string | null {
 
 export function getAppOrigin(): string | null {
   return normalizeOrigin(
-    process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL,
+    readEnv("NEXT_PUBLIC_APP_URL") ?? readEnv("NEXT_PUBLIC_SITE_URL"),
   );
 }
 

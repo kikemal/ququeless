@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { readEnv } from "@/lib/env";
 import type { Database } from "@/types/database";
 
 /**
@@ -12,8 +13,8 @@ export function createAdminClient() {
     throw new Error("createAdminClient must not run in the browser");
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!url || !serviceRoleKey) {
     throw new Error(
